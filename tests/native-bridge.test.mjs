@@ -95,3 +95,57 @@ test("native bridge forwards unexpected runtime errors to the local log", async 
     args: { error: "Errore frontend di prova" }
   });
 });
+
+test("native bridge exposes the configurable storage location commands", async () => {
+  const calls = [];
+  const bridge = createNativeBridge(async (command, args) => {
+    calls.push([command, args]);
+    if (command === "get_storage_location") {
+      return { directory: "C:\\Users\\Ada\\Broject", isDefault: false, containsWorkspace: true };
+    }
+    if (command === "choose_storage_location") {
+      return { directory: "D:\\Broject", isDefault: false, containsWorkspace: false };
+    }
+    if (command === "inspect_storage_location") {
+      return { directory: args.directory, isDefault: false, containsWorkspace: false };
+    }
+    return { directory: args.directory, isDefault: false, containsWorkspace: false };
+  });
+
+  assert.deepEqual(await bridge.getStorageLocation(), {
+    directory: "C:\\Users\\Ada\\Broject",
+    isDefault: false,
+    containsWorkspace: true
+  });
+  assert.deepEqual(await bridge.chooseStorageLocation(), {
+    directory: "D:\\Broject",
+    isDefault: false,
+    containsWorkspace: false
+  });
+  assert.deepEqual(await bridge.inspectStorageLocation("D:\\Broject"), {
+    directory: "D:\\Broject",
+    isDefault: false,
+    containsWorkspace: false
+  });
+  assert.deepEqual(await bridge.setStorageLocation("D:\\Broject", "copy"), {
+    directory: "D:\\Broject",
+    isDefault: false,
+    containsWorkspace: false
+  });
+
+  assert.deepEqual(calls, [
+    ["get_storage_location", undefined],
+    ["choose_storage_location", undefined],
+    ["inspect_storage_location", { directory: "D:\\Broject" }],
+    ["set_storage_location", { directory: "D:\\Broject", mode: "copy" }]
+  ]);
+});
+
+test("browser bridge marks physical storage location controls as unsupported", async () => {
+  const bridge = createNativeBridge(null, { save() {}, load() {} });
+
+  assert.deepEqual(await bridge.getStorageLocation(), { native: false, supported: false });
+  assert.deepEqual(await bridge.chooseStorageLocation(), { native: false, supported: false });
+  assert.deepEqual(await bridge.inspectStorageLocation("/tmp/Broject"), { native: false, supported: false });
+  assert.deepEqual(await bridge.setStorageLocation("/tmp/Broject", "copy"), { native: false, supported: false });
+});

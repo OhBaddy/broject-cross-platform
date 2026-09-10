@@ -158,3 +158,29 @@ test("native unrecoverable storage errors preserve the WPF recovery instructions
 
   assert.match(storage, /I file sono stati conservati in \{\}\. Ripristina una copia valida prima di riaprire l’app\./);
 });
+
+test("native storage exposes a persistent configurable data-directory contract", async () => {
+  const [storage, main] = await Promise.all([
+    readFile(new URL("../src-tauri/src/storage.rs", import.meta.url), "utf8"),
+    readFile(new URL("../src-tauri/src/main.rs", import.meta.url), "utf8")
+  ]);
+
+  assert.match(storage, /pub struct StorageLocation/);
+  assert.match(storage, /pub struct StorageInspection/);
+  assert.match(storage, /broject-settings\.json/);
+  assert.match(storage, /pub fn get_storage_location\(\)/);
+  assert.match(storage, /pub fn choose_storage_location\(\)/);
+  assert.match(storage, /pub fn inspect_storage_location\(/);
+  assert.match(storage, /pub fn set_storage_location\(/);
+  assert.match(storage, /contains_workspace/);
+  assert.match(storage, /use-existing/);
+  assert.match(storage, /FolderBrowserDialog/);
+  assert.match(storage, /choose folder/);
+  assert.match(storage, /--file-selection/);
+  assert.match(storage, /--directory/);
+  assert.match(main, /fn get_storage_location\(\)/);
+  assert.match(main, /fn choose_storage_location\(\)/);
+  assert.match(main, /fn inspect_storage_location\(directory: String\)/);
+  assert.match(main, /fn set_storage_location\(directory: String, mode: String\)/);
+  assert.match(main, /get_storage_location,\s*choose_storage_location,\s*inspect_storage_location,\s*set_storage_location/s);
+});

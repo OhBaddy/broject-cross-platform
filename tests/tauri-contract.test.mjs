@@ -181,6 +181,6 @@ test("native storage exposes a persistent configurable data-directory contract",
   assert.match(main, /fn get_storage_location\(\)/);
   assert.match(main, /fn choose_storage_location\(\)/);
   assert.match(main, /fn inspect_storage_location\(directory: String\)/);
-  assert.match(main, /fn set_storage_location\(directory: String, mode: String\)/);
+  assert.match(main, /fn set_storage_location\(\s*directory: String,\s*mode: String,?\s*\)/s);
   assert.match(main, /get_storage_location,\s*choose_storage_location,\s*inspect_storage_location,\s*set_storage_location/s);
 });

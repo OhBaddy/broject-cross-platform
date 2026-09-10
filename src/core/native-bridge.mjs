@@ -21,6 +21,26 @@ export function createNativeBridge(invoke = null, fallbackStore = null) {
       return fallbackStore.save(state);
     },
 
+    async getStorageLocation() {
+      if (nativeInvoke) return nativeInvoke("get_storage_location");
+      return { native: false, supported: false };
+    },
+
+    async chooseStorageLocation() {
+      if (nativeInvoke) return nativeInvoke("choose_storage_location");
+      return { native: false, supported: false };
+    },
+
+    async inspectStorageLocation(directory) {
+      if (nativeInvoke) return nativeInvoke("inspect_storage_location", { directory });
+      return { native: false, supported: false };
+    },
+
+    async setStorageLocation(directory, mode) {
+      if (nativeInvoke) return nativeInvoke("set_storage_location", { directory, mode });
+      return { native: false, supported: false };
+    },
+
     async saveReport(bytes, defaultFileName, dialogTitle = "Esporta report") {
       if (nativeInvoke) {
         const values = bytes instanceof Uint8Array ? [...bytes] : [...new Uint8Array(bytes)];

@@ -28,6 +28,45 @@ fn save_workspace(state_json: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn get_storage_location() -> Result<storage::StorageLocation, String> {
+    let result = storage::get_storage_location();
+    if let Err(error) = &result {
+        storage::write_error_log(error);
+    }
+    result
+}
+
+#[tauri::command]
+fn choose_storage_location() -> Result<Option<storage::StorageLocation>, String> {
+    let result = storage::choose_storage_location();
+    if let Err(error) = &result {
+        storage::write_error_log(error);
+    }
+    result
+}
+
+#[tauri::command]
+fn inspect_storage_location(directory: String) -> Result<storage::StorageInspection, String> {
+    let result = storage::inspect_storage_location(&directory);
+    if let Err(error) = &result {
+        storage::write_error_log(error);
+    }
+    result
+}
+
+#[tauri::command]
+fn set_storage_location(
+    directory: String,
+    mode: String,
+) -> Result<storage::StorageLocation, String> {
+    let result = storage::set_storage_location(&directory, &mode);
+    if let Err(error) = &result {
+        storage::write_error_log(error);
+    }
+    result
+}
+
+#[tauri::command]
 fn save_report(
     default_file_name: String,
     dialog_title: String,
@@ -78,6 +117,10 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             load_workspace,
             save_workspace,
+            get_storage_location,
+            choose_storage_location,
+            inspect_storage_location,
+            set_storage_location,
             save_report,
             open_report,
             log_error

@@ -77,3 +77,13 @@ La configurazione della posizione resta nella directory applicativa predefinita,
 La copia viene controllata prima di pubblicare la nuova posizione, la cartella precedente non viene cancellata e i file di recupero vengono conservati. Se la cartella configurata non è disponibile, Broject blocca l’avvio senza creare un workspace vuoto: ricollega il drive e premi `Riprova`, oppure ripristina una cartella dati valida.
 
 Nel browser la persistenza resta in `localStorage`, perché una pagina web non può scegliere una cartella fisica. Per configurare una directory del computer usa la versione desktop.
+
+## Download Windows
+
+Gli artefatti Windows aggiornati sono disponibili direttamente nel repository:
+
+- [Installer NSIS](artifacts/Broject_3.0.0_windows_x64-setup.exe) — installazione guidata;
+- [Portable ZIP](artifacts/Broject_3.0.0_windows_x64-portable.zip) — estrai la cartella e avvia `Broject.exe`;
+- [Standalone EXE](artifacts/Broject_3.0.0_windows_x64.exe) — tieni accanto anche `WebView2Loader.dll` se lo usi fuori dal portable ZIP.
+
+Serve Microsoft WebView2 Runtime, normalmente già presente su Windows 10 e 11. Gli artefatti sono build non firmate: Windows potrebbe mostrare un avviso SmartScreen al primo avvio.

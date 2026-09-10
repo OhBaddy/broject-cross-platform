@@ -128,12 +128,26 @@ pub fn inspect_storage_location(directory: &str) -> Result<StorageInspection, St
 }
 
 pub fn set_storage_location(directory: &str, mode: &str) -> Result<StorageLocation, String> {
+    set_storage_location_at(
+        &PathBuf::from(directory),
+        mode,
+        &application_directory()?,
+        &settings_path()?,
+    )
+}
+
+fn set_storage_location_at(
+    target: &Path,
+    mode: &str,
+    default_directory: &Path,
+    settings: &Path,
+) -> Result<StorageLocation, String> {
     if !matches!(mode, "copy" | "use-existing") {
         return Err("Modalità di cambio cartella non valida.".to_string());
     }
 
-    let target = validate_directory_path(PathBuf::from(directory))?;
-    let source = active_data_directory()?;
+    let target = validate_directory_path(target.to_path_buf())?;
+    let source = resolve_active_data_directory(default_directory, settings)?;
     if same_directory(&source, &target) {
         return storage_location_for_directory(&target);
     }
@@ -151,7 +165,7 @@ pub fn set_storage_location(directory: &str, mode: &str) -> Result<StorageLocati
             &paths_for_directory(target.clone()),
         )?;
     }
-    write_storage_settings(&target)?;
+    write_storage_settings_at(settings, &target)?;
     storage_location_for_directory(&target)
 }
 
@@ -208,15 +222,18 @@ fn settings_path() -> Result<PathBuf, String> {
 
 fn active_data_directory() -> Result<PathBuf, String> {
     let default = application_directory()?;
-    let path = settings_path()?;
-    match read_storage_settings_at(&path)? {
-        Some(directory) => Ok(directory),
-        None => Ok(default),
-    }
+    resolve_active_data_directory(&default, &settings_path()?)
 }
 
-fn write_storage_settings(directory: &Path) -> Result<(), String> {
-    write_storage_settings_at(&settings_path()?, directory)
+fn resolve_active_data_directory(default: &Path, settings: &Path) -> Result<PathBuf, String> {
+    match read_storage_settings_at(settings)? {
+        Some(directory) if !directory.is_dir() => Err(format!(
+            "La cartella dati configurata non è disponibile: {}",
+            directory.display()
+        )),
+        Some(directory) => Ok(directory),
+        None => Ok(default.to_path_buf()),
+    }
 }
 
 fn read_storage_settings_at(path: &Path) -> Result<Option<PathBuf>, String> {
@@ -353,6 +370,15 @@ fn ensure_writable_directory(directory: &Path) -> Result<(), String> {
 }
 
 fn copy_storage_files(source: &StoragePaths, target: &StoragePaths) -> Result<(), String> {
+    let source_has_valid_primary = valid_workspace_file(&source.data)?;
+    let source_has_valid_backup = valid_workspace_file(&source.backup)?;
+    if !source_has_valid_primary && !source_has_valid_backup {
+        return Err(
+            "Il workspace da copiare non contiene un file dati o un backup JSON valido."
+                .to_string(),
+        );
+    }
+
     let files = [
         (&source.data, &target.data),
         (&source.backup, &target.backup),
@@ -394,11 +420,6 @@ fn copy_storage_files(source: &StoragePaths, target: &StoragePaths) -> Result<()
                 return Err(format!("Impossibile proteggere la copia dati: {error}"));
             }
         }
-        if target_path == &target.data && read_json(&temporary).is_err() {
-            let _ = fs::remove_file(&temporary);
-            cleanup_published_files(&published);
-            return Err("Il file dati esistente non è un JSON di workspace valido.".to_string());
-        }
         if let Err(error) = replace_file_atomically(&temporary, target_path) {
             let _ = fs::remove_file(&temporary);
             cleanup_published_files(&published);
@@ -406,7 +427,21 @@ fn copy_storage_files(source: &StoragePaths, target: &StoragePaths) -> Result<()
         }
         published.push(target_path.to_path_buf());
     }
+
+    if !valid_workspace_file(&target.data)? && !valid_workspace_file(&target.backup)? {
+        cleanup_published_files(&published);
+        return Err(
+            "La copia del workspace non contiene un file dati o un backup JSON valido.".to_string(),
+        );
+    }
     Ok(())
+}
+
+fn valid_workspace_file(path: &Path) -> Result<bool, String> {
+    if !path_exists(path)? {
+        return Ok(false);
+    }
+    Ok(read_json(path).is_ok())
 }
 
 fn cleanup_published_files(files: &[PathBuf]) {
@@ -987,13 +1022,25 @@ mod tests {
     fn storage_settings_round_trip_and_reject_invalid_directory() {
         let root = env::temp_dir().join(format!("broject-rust-settings-{}", unique_suffix()));
         let settings = root.join("config").join("broject-settings.json");
+        let default = root.join("default");
         let selected = root.join("selected");
 
         assert_eq!(read_storage_settings_at(&settings).unwrap(), None);
+        assert_eq!(
+            resolve_active_data_directory(&default, &settings).unwrap(),
+            default
+        );
         write_storage_settings_at(&settings, &selected).unwrap();
         assert_eq!(
             read_storage_settings_at(&settings).unwrap(),
             Some(selected.clone())
+        );
+        assert!(resolve_active_data_directory(&default, &settings).is_err());
+
+        fs::create_dir_all(&selected).unwrap();
+        assert_eq!(
+            resolve_active_data_directory(&default, &settings).unwrap(),
+            selected
         );
 
         fs::write(&settings, r#"{"dataDirectory":"relative"}"#).unwrap();
@@ -1069,5 +1116,112 @@ mod tests {
         assert!(!target.backup.exists());
         let _ = fs::remove_dir_all(source.data.parent().unwrap());
         let _ = fs::remove_dir_all(target.data.parent().unwrap());
+    }
+
+    #[test]
+    fn copy_storage_files_keeps_recoverable_backup_when_primary_is_corrupt() {
+        let source = test_paths("copy-recoverable-source");
+        let target = test_paths("copy-recoverable-target");
+        fs::create_dir_all(source.data.parent().unwrap()).unwrap();
+        fs::write(&source.data, "broken").unwrap();
+        fs::write(
+            &source.backup,
+            r#"{"SchemaVersion":3,"Projects":[],"People":[],"Tasks":[]}"#,
+        )
+        .unwrap();
+        fs::create_dir_all(target.data.parent().unwrap()).unwrap();
+
+        copy_storage_files(&source, &target).unwrap();
+
+        assert_eq!(fs::read_to_string(&target.data).unwrap(), "broken");
+        assert!(load_from_paths(&target).unwrap().recovery_message.is_some());
+        let _ = fs::remove_dir_all(source.data.parent().unwrap());
+        let _ = fs::remove_dir_all(target.data.parent().unwrap());
+    }
+
+    #[test]
+    fn set_storage_location_copy_publishes_config_only_after_migration() {
+        let root = env::temp_dir().join(format!("broject-rust-set-copy-{}", unique_suffix()));
+        let default = root.join("default");
+        let settings = root.join("config").join("broject-settings.json");
+        let source = paths_for_directory(default.clone());
+        let target = root.join("target");
+        save_to_paths(
+            &source,
+            &json!({ "SchemaVersion": 3, "Projects": [], "People": [], "Tasks": [] }),
+            true,
+        )
+        .unwrap();
+        fs::write(&source.backup, "backup").unwrap();
+        fs::write(&source.corrupt, "corrupt").unwrap();
+        fs::write(&source.log, "log").unwrap();
+
+        let result = set_storage_location_at(&target, "copy", &default, &settings).unwrap();
+
+        assert_eq!(result.directory, target.to_string_lossy());
+        assert_eq!(
+            resolve_active_data_directory(&default, &settings).unwrap(),
+            target
+        );
+        assert_eq!(
+            fs::read_to_string(&source.data).unwrap(),
+            fs::read_to_string(&paths_for_directory(target.clone()).data).unwrap()
+        );
+        assert_eq!(
+            fs::read_to_string(paths_for_directory(target.clone()).backup).unwrap(),
+            "backup"
+        );
+        assert_eq!(
+            fs::read_to_string(paths_for_directory(target.clone()).corrupt).unwrap(),
+            "corrupt"
+        );
+        assert_eq!(
+            fs::read_to_string(paths_for_directory(target.clone()).log).unwrap(),
+            "log"
+        );
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn set_storage_location_use_existing_keeps_source_untouched() {
+        let root = env::temp_dir().join(format!("broject-rust-set-existing-{}", unique_suffix()));
+        let default = root.join("default");
+        let settings = root.join("config").join("broject-settings.json");
+        let source = paths_for_directory(default.clone());
+        let target = root.join("target");
+        let target_paths = paths_for_directory(target.clone());
+        save_to_paths(&source, &json!({ "value": "source" }), true).unwrap();
+        save_to_paths(&target_paths, &json!({ "value": "existing" }), true).unwrap();
+
+        set_storage_location_at(&target, "use-existing", &default, &settings).unwrap();
+
+        assert_eq!(
+            resolve_active_data_directory(&default, &settings).unwrap(),
+            target
+        );
+        assert_eq!(read_json(&source.data).unwrap()["value"], "source");
+        assert_eq!(read_json(&target_paths.data).unwrap()["value"], "existing");
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn set_storage_location_copy_rejects_occupied_target_without_changes() {
+        let root = env::temp_dir().join(format!("broject-rust-set-occupied-{}", unique_suffix()));
+        let default = root.join("default");
+        let settings = root.join("config").join("broject-settings.json");
+        let source = paths_for_directory(default.clone());
+        let target = root.join("target");
+        let target_paths = paths_for_directory(target.clone());
+        save_to_paths(&source, &json!({ "value": "source" }), true).unwrap();
+        save_to_paths(&target_paths, &json!({ "value": "keep" }), true).unwrap();
+
+        assert!(set_storage_location_at(&target, "copy", &default, &settings).is_err());
+
+        assert_eq!(read_json(&target_paths.data).unwrap()["value"], "keep");
+        assert_eq!(
+            resolve_active_data_directory(&default, &settings).unwrap(),
+            default
+        );
+        let _ = fs::remove_dir_all(root);
     }
 }

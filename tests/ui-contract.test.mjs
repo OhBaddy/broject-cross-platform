@@ -846,3 +846,33 @@ test("project navigation keeps WPF edge arrows as no-ops", async () => {
 
   assert.match(moveProjectNavFocus, /if \(!next \|\| next === document\.activeElement\) return;/);
 });
+
+test("storage settings expose an accessible native data-directory flow", async () => {
+  const [html, app, styles] = await Promise.all([
+    readFile(new URL("index.html", sourceDirectory), "utf8"),
+    readFile(new URL("app.mjs", sourceDirectory), "utf8"),
+    readFile(new URL("styles.css", sourceDirectory), "utf8")
+  ]);
+
+  assert.match(html, /id="storageLocationButton"[^>]*aria-label="Configura la cartella dati"/);
+  assert.match(html, /id="storageDialog"[^>]*aria-labelledby="storageDialogTitle"/);
+  assert.match(html, /id="storageCurrentPath"/);
+  assert.match(html, /id="storageSelectionPath"/);
+  assert.match(html, /id="storageChooseButton"/);
+  assert.match(html, /id="storageCopyButton"/);
+  assert.match(html, /id="storageUseButton"/);
+  assert.match(html, /id="storageCancelButton"/);
+  assert.match(html, /id="storageError"[^>]*role="alert"[^>]*aria-live="assertive"/);
+  assert.match(html, /id="storageBrowserNote"/);
+  assert.match(app, /function openStorageDialog\(/);
+  assert.match(app, /getStorageLocation\(\)/);
+  assert.match(app, /chooseStorageLocation\(\)/);
+  assert.match(app, /inspectStorageLocation\(/);
+  assert.match(app, /setStorageLocation\(/);
+  assert.match(app, /Copia i dati e cambia posizione/);
+  assert.match(app, /localStorage/);
+  assert.match(styles, /\.storage-location-button\s*\{[^}]*min-width:\s*0/);
+  assert.match(styles, /\.storage-location-copy\s*\{[^}]*min-width:\s*0/);
+  assert.match(styles, /\.storage-path\s*\{[^}]*overflow-wrap:\s*anywhere/);
+  assert.doesNotMatch(styles, /\.storage-path\s*\{[^}]*overflow-x:\s*auto/);
+});

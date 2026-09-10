@@ -34,7 +34,7 @@
 - Produces the expected native commands and response shape for `get_storage_location`, `choose_storage_location`, `inspect_storage_location` and `set_storage_location`.
 - Defines the migration modes as stable strings: `copy` and `use-existing`.
 
-- [ ] **Step 1: Scrivere i test JavaScript rossi del bridge**
+- [x] **Step 1: Scrivere i test JavaScript rossi del bridge**
 
   Estendere `tests/native-bridge.test.mjs` per verificare che:
 
@@ -44,17 +44,17 @@
   - `setStorageLocation(directory, mode)` passi `{ directory, mode }`;
   - in browser le operazioni restituiscano un marker `native: false` senza toccare il DOM.
 
-- [ ] **Step 2: Scrivere i test di contratto Rust rossi**
+- [x] **Step 2: Scrivere i test di contratto Rust rossi**
 
   In `tests/tauri-contract.test.mjs` verificare l’esistenza dei tipi serializzati, dei quattro comandi nel `generate_handler!`, della lettura della configurazione e del dialogo directory Windows/macOS/Linux. Verificare anche che la risposta esprima `directory`, `isDefault` e `containsWorkspace` in camelCase.
 
-- [ ] **Step 3: Eseguire i test mirati e confermare il fallimento**
+- [x] **Step 3: Eseguire i test mirati e confermare il fallimento**
 
   Run: `node --test tests/native-bridge.test.mjs tests/tauri-contract.test.mjs`
 
   Expected: FAIL perché i metodi bridge e i comandi nativi non esistono ancora.
 
-- [ ] **Step 4: Commit del contratto rosso**
+- [x] **Step 4: Commit del contratto rosso**
 
   Run: `git diff --check`.
 
@@ -73,7 +73,7 @@
 - Consumes: existing `application_directory()`, `paths_for_directory()`, atomic JSON save/recovery.
 - Produces: `configured_data_directory()`, `default_paths()`, a stable config file outside the selected data folder, and `StorageLocation`/`StorageInspection` responses.
 
-- [ ] **Step 1: Aggiungere test unitari rossi con directory temporanee**
+- [x] **Step 1: Aggiungere test unitari rossi con directory temporanee**
 
   Coprire:
 
@@ -84,21 +84,21 @@
   - destinazione già contenente un `broject-data.json` valido/non valido;
   - nessuna scrittura della configurazione finché la copia non è stata validata.
 
-- [ ] **Step 2: Separare directory applicativa e directory dati attiva**
+- [x] **Step 2: Separare directory applicativa e directory dati attiva**
 
   Conservare `application_directory()` come posizione stabile di configurazione/lock. Introdurre un file dedicato, ad esempio `broject-settings.json`, con un solo campo `dataDirectory`. Non mettere il puntatore dentro la directory selezionata: così Broject può ritrovarla anche se il drive esterno non è collegato.
 
   `default_paths()` deve risolvere la directory configurata, mantenendo il default esistente quando il file manca.
 
-- [ ] **Step 3: Aggiungere validazione portabile del percorso**
+- [x] **Step 3: Aggiungere validazione portabile del percorso**
 
   Accettare solo un percorso assoluto, normalizzare senza seguire un file come se fosse una directory e creare la directory solo durante un’operazione autorizzata. Separare gli errori di directory inesistente, non leggibile e non scrivibile così la UI può mostrarli vicino all’azione.
 
-- [ ] **Step 4: Implementare le risposte di ispezione**
+- [x] **Step 4: Implementare le risposte di ispezione**
 
   Restituire il percorso lossless in formato stringa, `isDefault` e `containsWorkspace`. `containsWorkspace` deve distinguere almeno primary/backup/corrupt e non basarsi soltanto sull’esistenza della directory.
 
-- [ ] **Step 5: Rieseguire i test Rust mirati e commit**
+- [x] **Step 5: Rieseguire i test Rust mirati e commit**
 
   Run: `cargo test --manifest-path src-tauri/Cargo.toml storage`.
 
@@ -122,7 +122,7 @@
 - `inspect_storage_location(directory)` returns `StorageInspection` without mutation.
 - `set_storage_location(directory, mode)` supports `copy` and `use-existing`.
 
-- [ ] **Step 1: Scrivere test rossi per il trasferimento**
+- [x] **Step 1: Scrivere test rossi per il trasferimento**
 
   Verificare:
 
@@ -135,7 +135,7 @@
   - path uguali sono trattati come no-op;
   - un target non directory viene rifiutato.
 
-- [ ] **Step 2: Aggiungere il dialogo nativo di selezione directory**
+- [x] **Step 2: Aggiungere il dialogo nativo di selezione directory**
 
   Riutilizzare il modello già usato da `reports.rs`, senza dipendenze:
 
@@ -145,15 +145,15 @@
   - cancel deve essere distinto da dialogo non disponibile;
   - il testo passato agli script deve essere escapato.
 
-- [ ] **Step 3: Implementare copia e pubblicazione della configurazione**
+- [x] **Step 3: Implementare copia e pubblicazione della configurazione**
 
   Copiare in una directory temporanea figlia della destinazione, validare il workspace e poi pubblicare il file `broject-settings.json` con scrittura atomica. Se il target contiene già dati, restituire un errore non distruttivo e lasciare alla UI la scelta `use-existing`.
 
-- [ ] **Step 4: Far seguire il log alla directory attiva con fallback**
+- [x] **Step 4: Far seguire il log alla directory attiva con fallback**
 
   `write_error_log` deve tentare prima la directory dati attiva; se è irraggiungibile deve scrivere nella directory applicativa stabile. Non loggare mai il contenuto del workspace o il percorso completo in messaggi non necessari.
 
-- [ ] **Step 5: Eseguire test Rust e commit**
+- [x] **Step 5: Eseguire test Rust e commit**
 
   Run: `cargo test --manifest-path src-tauri/Cargo.toml`.
 
@@ -177,15 +177,15 @@
 - Tauri commands: `get_storage_location`, `choose_storage_location`, `inspect_storage_location`, `set_storage_location`.
 - JS bridge methods: `getStorageLocation()`, `chooseStorageLocation()`, `inspectStorageLocation(directory)`, `setStorageLocation(directory, mode)`.
 
-- [ ] **Step 1: Collegare i command wrapper in `main.rs`**
+- [x] **Step 1: Collegare i command wrapper in `main.rs`**
 
   Ogni comando deve usare il modulo storage, loggare gli errori tramite il percorso di fallback e comparire in `tauri::generate_handler!`. I payload devono usare nomi camelCase lato frontend.
 
-- [ ] **Step 2: Implementare il bridge con fallback esplicito**
+- [x] **Step 2: Implementare il bridge con fallback esplicito**
 
   Il bridge nativo inoltra i comandi e il bridge browser restituisce `{ native: false, supported: false }` per scelta/ispezione/cambio, senza simulare una directory fisica. `load()` e `save()` restano invariati.
 
-- [ ] **Step 3: Eseguire test mirati e commit**
+- [x] **Step 3: Eseguire test mirati e commit**
 
   Run: `node --test tests/native-bridge.test.mjs tests/tauri-contract.test.mjs`.
 
@@ -211,7 +211,7 @@
 - Consumes: native bridge methods and existing modal/focus/confirmation helpers.
 - Produces: accessible `#storageDialog`, sidebar location affordance, migration confirmation, loading/error/success states and reload on successful switch.
 
-- [ ] **Step 1: Scrivere test UI rossi**
+- [x] **Step 1: Scrivere test UI rossi**
 
   Verificare:
 
@@ -222,25 +222,25 @@
   - browser fallback comunica che la cartella fisica è disponibile nella versione desktop;
   - focus ritorna al pulsante sorgente e le azioni sono disabilitate durante l’operazione.
 
-- [ ] **Step 2: Eseguire il test mirato e confermare il fallimento**
+- [x] **Step 2: Eseguire il test mirato e confermare il fallimento**
 
   Run: `node --test tests/ui-contract.test.mjs`.
 
   Expected: FAIL sulle nuove asserzioni.
 
-- [ ] **Step 3: Inserire il controllo nella sidebar e il dialog**
+- [x] **Step 3: Inserire il controllo nella sidebar e il dialog**
 
   Trasformare il footer “Workspace locale” in un controllo accessibile che mostri un percorso breve. Nel dialog usare le superfici e i radii esistenti, testo operativo in italiano, un blocco percorso con `overflow-wrap:anywhere`, ellipsis dove appropriato e tooltip con valore completo. Aggiungere icona SVG coerente, mai emoji.
 
-- [ ] **Step 4: Implementare il flusso applicativo**
+- [x] **Step 4: Implementare il flusso applicativo**
 
   All’apertura caricare e visualizzare la posizione nativa senza bloccare il normale startup. Selezionare una destinazione, ispezionarla, proporre la migrazione solo quando esistono dati; distinguere cancel, errore dialogo, destinazione occupata, cartella non scrivibile e successo. Prima del cambio, usare i guard esistenti per editor sporchi e impedire il comando durante export/salvataggio. Dopo successo chiudere il dialog, mostrare feedback e ricaricare così `load_workspace` riapre il workspace dalla nuova posizione.
 
-- [ ] **Step 5: Implementare browser fallback e accessibilità**
+- [x] **Step 5: Implementare browser fallback e accessibilità**
 
   Nel browser il dialog resta leggibile ma indica che `localStorage` continua a essere usato. Garantire focus visibile, `aria-live` per esito/errori, stato busy, `Escape`, ritorno focus e contrasto coerente alla finestra minima.
 
-- [ ] **Step 6: Eseguire test UI mirati e commit**
+- [x] **Step 6: Eseguire test UI mirati e commit**
 
   Run: `node --test tests/ui-contract.test.mjs`.
 
@@ -263,11 +263,11 @@
 - Documents default paths, Windows folder picker, migration choices, browser fallback and recovery behavior.
 - Verifies that release builds do not point to localhost and that the feature is discoverable without exposing sensitive local data.
 
-- [ ] **Step 1: Aggiornare la documentazione utente**
+- [x] **Step 1: Aggiornare la documentazione utente**
 
   Documentare “Cartella dati”, default Windows, contenuto della cartella, comportamento di trasferimento e cosa fare se un drive non è disponibile. Non includere percorsi personali, token o file generati.
 
-- [ ] **Step 2: Eseguire la suite completa**
+- [x] **Step 2: Eseguire la suite completa**
 
   Run: `npm test`.
 
@@ -275,11 +275,11 @@
 
   Run: `cargo test --manifest-path src-tauri/Cargo.toml`.
 
-  Expected: tutti i test Rust PASS.
+  Expected: tutti i test Rust PASS. Questo repository cross-platform non contiene una soluzione `.sln`, quindi la build WPF non è applicabile qui.
 
   Run: `dotnet build .\\Broject.sln --configfile .\\NuGet.Config -m:1` only if the WPF solution is present in the selected workspace; otherwise record that this cross-platform repository has no `.sln`.
 
-- [ ] **Step 3: Verificare il runtime frontend**
+- [x] **Step 3: Verificare il runtime frontend**
 
   Avviare il server locale con `npm run dev`, usare lo smoke già presente e verificare almeno:
 
@@ -289,7 +289,7 @@
   - focus da tastiera e chiusura con Escape;
   - stato disabilitato durante cambio posizione.
 
-- [ ] **Step 4: Verificare il contratto nativo standalone**
+- [x] **Step 4: Verificare il contratto nativo standalone**
 
   Eseguire `cargo check --locked --release --features custom-protocol --manifest-path src-tauri/Cargo.toml` e, se l’ambiente lo permette, `cargo tauri build --ci`. Confermare che il bundle release usi `frontendDist` e non `devUrl`, e annotare esplicitamente ogni verifica Windows non eseguibile su Linux.
 

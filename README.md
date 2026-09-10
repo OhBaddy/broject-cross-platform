@@ -63,3 +63,17 @@ Il lock Unix di singola istanza usa permessi `0600`; directory dati e log usano 
 Su Linux il dialogo nativo usa `zenity` o, in alternativa, `kdialog`; senza nessuno dei due l’export ricade sul download browser. Su Windows usa `SaveFileDialog` via PowerShell e su macOS `osascript`; anche questi due percorsi hanno il medesimo fallback browser se il comando OS non è disponibile.
 
 La persistenza nativa usa `%APPDATA%/Broject` su Windows, `~/Library/Application Support/Broject` su macOS e `$XDG_CONFIG_HOME/Broject` (oppure `~/.config/Broject`) su Linux. I dati locali e i backup Unix vengono creati con permessi riservati all’utente.
+
+## Cartella dati
+
+Dal pulsante `Cartella dati` in fondo alla sidebar desktop puoi scegliere dove Broject conserva il workspace locale. Su Windows la posizione predefinita è `%APPDATA%\\Broject`; la cartella contiene `broject-data.json`, il backup `.bak`, l’eventuale copia `.corrupt` e `broject-error.log`.
+
+La configurazione della posizione resta nella directory applicativa predefinita, così Broject può ritrovare il percorso selezionato anche dopo il riavvio. Quando scegli una nuova cartella puoi:
+
+- usare i dati già presenti nella destinazione;
+- copiare il workspace attuale in una cartella vuota e poi renderla attiva;
+- annullare l’operazione.
+
+La copia viene controllata prima di pubblicare la nuova posizione, la cartella precedente non viene cancellata e i file di recupero vengono conservati. Se la cartella configurata non è disponibile, Broject blocca l’avvio senza creare un workspace vuoto: ricollega il drive e premi `Riprova`, oppure ripristina una cartella dati valida.
+
+Nel browser la persistenza resta in `localStorage`, perché una pagina web non può scegliere una cartella fisica. Per configurare una directory del computer usa la versione desktop.

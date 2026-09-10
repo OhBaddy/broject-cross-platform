@@ -27,6 +27,25 @@ try {
   if (initial.title !== "Broject — il lavoro, finalmente chiaro" || !initial.overview || !initial.emptyWelcome) throw new Error("stato iniziale overview non valido");
   await page.screenshot({ path: overviewScreenshotPath, fullPage: true });
 
+  await page.locator("#storageLocationButton").click();
+  await page.waitForFunction(() => document.querySelector("#storageDialog")?.open === true);
+  const storageFallback = await page.evaluate(() => ({
+    path: document.querySelector("#storageCurrentPath")?.textContent?.trim(),
+    status: document.querySelector("#storageCurrentStatus")?.textContent?.trim(),
+    browserNoteVisible: document.querySelector("#storageBrowserNote")?.classList.contains("is-hidden") === false,
+    chooseVisible: document.querySelector("#storageChooseButton")?.offsetParent !== null,
+    active: document.activeElement?.id,
+    pageHasHorizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth
+  }));
+  if (storageFallback.path !== "localStorage" || storageFallback.status !== "Browser"
+    || !storageFallback.browserNoteVisible || storageFallback.chooseVisible
+    || storageFallback.active !== "storageCancelButton" || storageFallback.pageHasHorizontalOverflow) {
+    throw new Error("fallback browser della cartella dati non valido");
+  }
+  await page.locator("#storageCancelButton").click();
+  await page.waitForFunction(() => document.querySelector("#storageDialog")?.open === false
+    && document.activeElement?.id === "storageLocationButton");
+
   await page.locator("#quickCreateButton").click();
   if (!(await page.locator("#projectDialog").isVisible().catch(() => false))) throw new Error("quick create vuoto non ha aperto il dialogo progetto WPF");
   await page.locator("#projectName").fill("UI smoke project");

@@ -20,6 +20,10 @@ const nativeBridge = createNativeBridge(nativeInvoke, fallbackStore);
 let loaded;
 let storageFailure = null;
 let nativeSaveQueue = Promise.resolve();
+let pendingSaveCount = 0;
+let storageLocation = null;
+let selectedStorageLocation = null;
+let storageOperationInProgress = false;
 try {
   loaded = await nativeBridge.load();
 } catch (error) {
@@ -32,27 +36,32 @@ const runtimeStore = {
   load: () => loaded,
   save: async (nextState) => {
     if (storageFailure) throw new Error(`${storageFailure} Nessuna modifica è stata salvata.`);
-    if (!nativeInvoke) {
-      fallbackStore.save(nextState);
-      return;
-    }
-
-    const snapshot = structuredClone(nextState);
-    const saveOperation = nativeSaveQueue.catch(() => {}).then(async () => {
-      if (storageFailure) throw new Error(`${storageFailure} Nessuna modifica è stata salvata.`);
-      try {
-        await nativeBridge.save(snapshot);
-      } catch (error) {
-        storageFailure = `Impossibile salvare i dati locali: ${error.message}`;
-        loaded.recoveryMessage = storageFailure;
-        if (document.body) {
-          showToast("Salvataggio non riuscito", "I dati restano in sola lettura finché lo storage locale non è disponibile.");
-        }
-        throw error;
+    pendingSaveCount += 1;
+    try {
+      if (!nativeInvoke) {
+        fallbackStore.save(nextState);
+        return;
       }
-    });
-    nativeSaveQueue = saveOperation;
-    await saveOperation;
+
+      const snapshot = structuredClone(nextState);
+      const saveOperation = nativeSaveQueue.catch(() => {}).then(async () => {
+        if (storageFailure) throw new Error(`${storageFailure} Nessuna modifica è stata salvata.`);
+        try {
+          await nativeBridge.save(snapshot);
+        } catch (error) {
+          storageFailure = `Impossibile salvare i dati locali: ${error.message}`;
+          loaded.recoveryMessage = storageFailure;
+          if (document.body) {
+            showToast("Salvataggio non riuscito", "I dati restano in sola lettura finché lo storage locale non è disponibile.");
+          }
+          throw error;
+        }
+      });
+      nativeSaveQueue = saveOperation;
+      await saveOperation;
+    } finally {
+      pendingSaveCount -= 1;
+    }
   }
 };
 const service = new WorkspaceService(runtimeStore);
@@ -306,6 +315,171 @@ function showToast(title, message) {
   setVisible("toast", true);
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => setVisible("toast", false), 3200);
+}
+
+const storageDefaultHelper = "I file di Broject restano sul dispositivo e includono dati, backup e log di recupero.";
+
+function storageDirectoryName(directory) {
+  const value = String(directory ?? "").replace(/[\\/]+$/, "");
+  return value.split(/[\\/]/).pop() || value;
+}
+
+function updateStorageLocationSummary(location = storageLocation) {
+  const button = $("storageLocationButton");
+  const summary = $("storageLocationSummary");
+  if (!button || !summary) return;
+  if (!nativeInvoke) {
+    summary.textContent = "Browser · localStorage";
+    button.title = "Cartella dati · gestita dal browser";
+    return;
+  }
+  const directory = String(location?.directory ?? "");
+  summary.textContent = directory
+    ? `${location?.isDefault ? "Predefinita" : "Personalizzata"} · ${storageDirectoryName(directory)}`
+    : "Percorso non disponibile";
+  button.title = directory ? `Configura la cartella dati · ${directory}` : "Configura la cartella dati";
+}
+
+function setStorageError(message = "") {
+  const error = $("storageError");
+  if (!error) return;
+  error.textContent = message;
+  setVisible("storageError", Boolean(message));
+}
+
+function setStorageDialogBusy(busy) {
+  storageOperationInProgress = busy;
+  const dialog = $("storageDialog");
+  if (dialog) dialog.setAttribute("aria-busy", busy ? "true" : "false");
+  ["storageCancelButton", "storageChooseButton", "storageUseButton", "storageCopyButton"].forEach((id) => {
+    const control = $(id);
+    if (control) control.disabled = busy;
+  });
+  if (busy && $("storageHelper")) $("storageHelper").textContent = "Controllo della cartella in corso…";
+  if (!busy && $("storageHelper")) $("storageHelper").textContent = storageDefaultHelper;
+}
+
+function renderStorageLocation(location) {
+  storageLocation = location;
+  updateStorageLocationSummary(location);
+  const currentPath = $("storageCurrentPath");
+  const currentStatus = $("storageCurrentStatus");
+  if (!currentPath || !currentStatus) return;
+  const directory = String(location?.directory ?? "Percorso non disponibile");
+  currentPath.textContent = directory;
+  currentPath.title = directory;
+  currentStatus.textContent = location?.isDefault ? "Predefinita" : "Personalizzata";
+}
+
+function clearStorageSelection() {
+  selectedStorageLocation = null;
+  setVisible("storageSelection", false);
+  setVisible("storageUseButton", false);
+  setVisible("storageCopyButton", false);
+  $("storageSelectionPath").textContent = "";
+  $("storageSelectionPath").removeAttribute("title");
+  $("storageSelectionHint").textContent = "";
+  setStorageError();
+}
+
+function renderStorageSelection(location) {
+  selectedStorageLocation = location;
+  const path = String(location?.directory ?? "");
+  const hasWorkspace = Boolean(location?.containsWorkspace);
+  $("storageSelectionPath").textContent = path;
+  $("storageSelectionPath").title = path;
+  $("storageSelectionStatus").textContent = hasWorkspace ? "Contiene dati" : "Disponibile";
+  setVisible("storageSelectionStatus", true);
+  $("storageSelectionHint").textContent = hasWorkspace
+    ? "Questa cartella contiene già file di Broject. Puoi usarli, senza sovrascrivere il workspace attuale."
+    : storageLocation?.containsWorkspace
+      ? "La cartella è vuota. Puoi copiare qui il workspace attuale oppure iniziare da una cartella vuota."
+      : "La cartella è pronta per il workspace locale.";
+  setVisible("storageSelection", true);
+  setVisible("storageUseButton", true);
+  $("storageUseButton").textContent = hasWorkspace ? "Usa i dati esistenti" : "Usa cartella vuota";
+  setVisible("storageCopyButton", Boolean(storageLocation?.containsWorkspace) && !hasWorkspace);
+}
+
+async function loadStorageLocation() {
+  if (!nativeInvoke) {
+    updateStorageLocationSummary();
+    return;
+  }
+  try {
+    renderStorageLocation(await nativeBridge.getStorageLocation());
+  } catch (error) {
+    storageLocation = null;
+    updateStorageLocationSummary();
+    void nativeBridge.logError(`[Cartella dati] ${runtimeErrorDetails(error)}`).catch(() => {});
+  }
+}
+
+async function openStorageDialog() {
+  if (storageOperationInProgress || exportInProgress || pendingSaveCount > 0) {
+    if (pendingSaveCount > 0) showToast("Salvataggio in corso", "Attendi la fine del salvataggio prima di cambiare cartella.");
+    return;
+  }
+  if (!$('taskDrawer').classList.contains("is-hidden")) {
+    confirmCloseEditor(() => { void openStorageDialog(); });
+    return;
+  }
+  rememberDialogFocus("storageDialog");
+  clearStorageSelection();
+  $("storageBrowserNote").classList.toggle("is-hidden", Boolean(nativeInvoke));
+  $("storageChooseButton").classList.toggle("is-hidden", !nativeInvoke);
+  $("storageDialog").showModal();
+  if (!nativeInvoke) {
+    renderStorageLocation({ directory: "localStorage", isDefault: true, containsWorkspace: true });
+    $("storageCurrentStatus").textContent = "Browser";
+    setTimeout(() => $("storageCancelButton")?.focus(), 0);
+    return;
+  }
+  setStorageDialogBusy(true);
+  try {
+    renderStorageLocation(await nativeBridge.getStorageLocation());
+    setTimeout(() => $("storageChooseButton")?.focus(), 0);
+  } catch (error) {
+    renderStorageLocation(null);
+    $("storageCurrentStatus").textContent = "Non disponibile";
+    setStorageError(`Impossibile leggere la cartella dati: ${error.message}`);
+    setTimeout(() => $("storageCancelButton")?.focus(), 0);
+  } finally {
+    setStorageDialogBusy(false);
+  }
+}
+
+async function chooseStorageLocation() {
+  if (!nativeInvoke || storageOperationInProgress) return;
+  setStorageError();
+  setStorageDialogBusy(true);
+  try {
+    const selected = await nativeBridge.chooseStorageLocation();
+    if (!selected?.directory) return;
+    const inspection = await nativeBridge.inspectStorageLocation(selected.directory);
+    renderStorageSelection({ ...selected, ...inspection });
+    $("storageUseButton")?.focus();
+  } catch (error) {
+    setStorageError(`Cartella non selezionata: ${error.message}`);
+  } finally {
+    setStorageDialogBusy(false);
+  }
+}
+
+async function applyStorageLocation(mode) {
+  if (!nativeInvoke || !selectedStorageLocation?.directory || storageOperationInProgress) return;
+  setStorageError();
+  setStorageDialogBusy(true);
+  try {
+    const result = await nativeBridge.setStorageLocation(selectedStorageLocation.directory, mode);
+    renderStorageLocation(result);
+    $("storageDialog").close();
+    showToast("Cartella dati aggiornata", "Broject riaprirà il workspace dalla nuova posizione.");
+    setTimeout(() => globalThis.location.reload(), 350);
+  } catch (error) {
+    setStorageError(`Cambio cartella non riuscito: ${error.message}`);
+    setStorageDialogBusy(false);
+  }
 }
 
 function runtimeErrorDetails(error) {
@@ -1665,6 +1839,10 @@ $("exportProjectHeaderButton").addEventListener("click", () => openProjectExport
 $("editProjectButton").addEventListener("click", () => openProjectDialog(projectById(selectedProjectId)));
 $("deleteProjectHeaderButton").addEventListener("click", () => { void deleteProject(projectById(selectedProjectId)); });
 $("helpButton").addEventListener("click", openHelpDialog);
+$("storageLocationButton").addEventListener("click", () => { void openStorageDialog(); });
+$("storageChooseButton").addEventListener("click", () => { void chooseStorageLocation(); });
+$("storageUseButton").addEventListener("click", () => { void applyStorageLocation("use-existing"); });
+$("storageCopyButton").addEventListener("click", () => { void applyStorageLocation("copy"); });
 $("addPersonButton").addEventListener("click", () => openPersonDialog());
 $("closeDrawerButton").addEventListener("click", () => confirmCloseEditor());
 $("drawerBackdrop").addEventListener("click", () => confirmCloseEditor());
@@ -1768,6 +1946,12 @@ $('actionConfirmDialog').addEventListener("cancel", (event) => {
 });
 $("reportNotesDialog").addEventListener("close", () => restoreDialogFocus("reportNotesDialog", "exportProjectButton"));
 $("helpDialog").addEventListener("close", () => restoreDialogFocus("helpDialog", "helpButton"));
+$("storageDialog").addEventListener("close", () => {
+  if (!storageOperationInProgress) {
+    clearStorageSelection();
+    restoreDialogFocus("storageDialog", "storageLocationButton");
+  }
+});
 $("deletePersonButton").addEventListener("click", () => { void deletePerson(personById(editingPersonId)); });
 $("statusFilter").addEventListener("change", (event) => { statusFilter = event.target.value; renderProject(); });
 $("personFilter").addEventListener("change", (event) => { personFilter = event.target.value; renderProject(); });
@@ -1828,4 +2012,5 @@ document.addEventListener("dragstart", (event) => {
 document.addEventListener("dragend", (event) => event.target.closest("[data-task-id]")?.classList.remove("is-dragging"));
 
 refreshAll();
+void loadStorageLocation();
 void installTauriCloseGuard();

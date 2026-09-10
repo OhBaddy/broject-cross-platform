@@ -869,7 +869,11 @@ test("storage settings expose an accessible native data-directory flow", async (
   assert.match(app, /chooseStorageLocation\(\)/);
   assert.match(app, /inspectStorageLocation\(/);
   assert.match(app, /setStorageLocation\(/);
-  assert.match(app, /Copia i dati e cambia posizione/);
+  assert.match(app, /let pendingSaveCount = 0/);
+  assert.match(app, /storageOperationInProgress \|\| exportInProgress \|\| pendingSaveCount > 0/);
+  assert.match(app, /renderStorageLocation\(\{ directory: "localStorage", isDefault: true, containsWorkspace: true \}\)/);
+  assert.match(app, /\$\("storageCurrentStatus"\)\.textContent = "Browser"/);
+  assert.match(html, /Copia i dati e cambia posizione/);
   assert.match(app, /localStorage/);
   assert.match(styles, /\.storage-location-button\s*\{[^}]*min-width:\s*0/);
   assert.match(styles, /\.storage-location-copy\s*\{[^}]*min-width:\s*0/);

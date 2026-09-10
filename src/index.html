@@ -21,6 +21,7 @@
       <symbol id="icon-plus" viewBox="0 0 20 20"><path d="M10 3v14M3 10h14" /></symbol>
       <symbol id="icon-close" viewBox="0 0 20 20"><path d="m4 4 12 12M16 4 4 16" /></symbol>
       <symbol id="icon-more" viewBox="0 0 20 20"><circle cx="4" cy="10" r="1" /><circle cx="10" cy="10" r="1" /><circle cx="16" cy="10" r="1" /></symbol>
+      <symbol id="icon-folder" viewBox="0 0 20 20"><path d="M2 5.5A1.5 1.5 0 0 1 3.5 4h4l1.5 2h7A1.5 1.5 0 0 1 17.5 7.5v7A1.5 1.5 0 0 1 16 16H4a2 2 0 0 1-2-2.1z" /><path d="M2.5 8h15" /></symbol>
       <symbol id="icon-arrow-left" viewBox="0 0 20 20"><path d="M16 10H4m5-5-5 5 5 5" /></symbol>
       <symbol id="icon-arrow-right" viewBox="0 0 20 20"><path d="M4 10h12m-5-5 5 5-5 5" /></symbol>
     </svg>
@@ -79,13 +80,14 @@
           <div class="project-nav-list" id="projectNavList" aria-label="Progetti"></div>
         </div>
 
-        <div class="sidebar-footer">
-          <div class="local-mark" aria-hidden="true">L</div>
-          <div>
-            <div class="workspace-title">Workspace locale</div>
-            <div class="workspace-subtitle">Dati salvati sul dispositivo</div>
+        <button class="sidebar-footer storage-location-button" id="storageLocationButton" type="button" title="Configura la cartella dati" aria-label="Configura la cartella dati">
+          <div class="local-mark" aria-hidden="true"><svg class="icon"><use href="#icon-folder" /></svg></div>
+          <div class="storage-location-copy">
+            <div class="workspace-title">Cartella dati</div>
+            <div class="workspace-subtitle" id="storageLocationSummary">Dati salvati sul dispositivo</div>
           </div>
-        </div>
+          <svg class="icon storage-location-chevron" aria-hidden="true"><use href="#icon-chevron" /></svg>
+        </button>
       </aside>
 
       <main class="workspace-main">
@@ -284,6 +286,36 @@
             </div>
             <div class="help-scroll-hint is-hidden" id="helpScrollHint"><span>Scorri per consultare tutte le sezioni</span><span aria-hidden="true">↓</span></div>
             <footer class="modal-actions"><button class="primary-button" value="cancel" type="submit">Chiudi</button></footer>
+          </form>
+        </dialog>
+        <dialog class="modal storage-dialog" id="storageDialog" aria-labelledby="storageDialogTitle" aria-describedby="storageDialogIntro">
+          <form method="dialog" id="storageForm">
+            <header class="modal-header">
+              <div class="modal-person-heading">
+                <span class="modal-avatar storage-dialog-avatar" aria-hidden="true"><svg class="icon"><use href="#icon-folder" /></svg></span>
+                <div><h2 id="storageDialogTitle">Cartella dati</h2><p id="storageDialogIntro">Decidi dove Broject conserva il workspace locale.</p></div>
+              </div>
+              <button class="icon-button" value="cancel" type="submit" formnovalidate aria-label="Chiudi cartella dati">×</button>
+            </header>
+            <section class="storage-current-card" aria-labelledby="storageCurrentLabel">
+              <div class="storage-card-heading"><span id="storageCurrentLabel">Cartella attiva</span><span class="storage-status" id="storageCurrentStatus">Predefinita</span></div>
+              <code class="storage-path" id="storageCurrentPath" title=""></code>
+            </section>
+            <p class="storage-helper" id="storageHelper">I file di Broject restano sul dispositivo e includono dati, backup e log di recupero.</p>
+            <section class="storage-selection is-hidden" id="storageSelection" aria-labelledby="storageSelectionLabel">
+              <div class="storage-card-heading"><span id="storageSelectionLabel">Nuova cartella</span><span class="storage-status is-hidden" id="storageSelectionStatus"></span></div>
+              <code class="storage-path" id="storageSelectionPath" title=""></code>
+              <p class="storage-selection-hint" id="storageSelectionHint"></p>
+            </section>
+            <p class="storage-browser-note is-hidden" id="storageBrowserNote">Nel browser i dati restano nel suo localStorage. La cartella fisica è configurabile nella versione desktop di Broject.</p>
+            <div class="modal-error is-hidden" id="storageError" role="alert" aria-live="assertive"></div>
+            <footer class="modal-actions storage-actions">
+              <button class="secondary-button" id="storageCancelButton" value="cancel" type="submit" formnovalidate>Chiudi</button>
+              <span class="action-spacer"></span>
+              <button class="secondary-button" id="storageChooseButton" type="button"><svg class="icon" aria-hidden="true"><use href="#icon-folder" /></svg>Scegli cartella</button>
+              <button class="secondary-button is-hidden" id="storageUseButton" type="button">Usa questa cartella</button>
+              <button class="primary-button is-hidden" id="storageCopyButton" type="button">Copia i dati e cambia posizione</button>
+            </footer>
           </form>
         </dialog>
         <dialog class="modal" id="unsavedTaskDialog"><form method="dialog" id="unsavedTaskForm"><header class="modal-header"><div><h2>Modifiche non salvate</h2><p>Vuoi salvare le modifiche prima di chiudere?</p></div></header><p class="unsaved-task-copy">Sì: salva e chiudi. No: scarta le modifiche. Annulla: continua a modificare.</p><footer class="modal-actions"><button class="secondary-button" data-unsaved-choice="cancel" type="button">Continua a modificare</button><button class="danger-button" data-unsaved-choice="discard" type="button">Scarta</button><button class="primary-button" data-unsaved-choice="save" type="button">Salva e chiudi</button></footer></form></dialog>

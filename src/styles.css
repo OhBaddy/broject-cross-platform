@@ -64,6 +64,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .project-nav-name { display: block; min-width: 0; max-width: 100%; }
 .project-nav-count { min-width: 22px; padding: 2px 7px; border-radius: 999px; background: #292D48; color: #B9BDCD; font-size: 12px; line-height: 1.25; text-align: center; }
 .sidebar-footer { margin-top: auto; padding: 14px 7px 2px; border-top: 1px solid #2C3049; }
+.storage-location-button { width: 100%; min-width: 0; border: 0; background: transparent; color: inherit; text-align: left; }
+.storage-location-button:hover { background: var(--sidebar-hover); }
+.storage-location-button:focus-visible { outline-color: #BDB5FF; outline-offset: 2px; }
+.storage-location-copy { min-width: 0; flex: 1; overflow: hidden; }
+.storage-location-copy .workspace-subtitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.storage-location-chevron { width: 14px; height: 14px; color: #8F94A9; }
 
 .workspace-main { min-width: 0; min-height: 100vh; background: var(--app-bg); }
 .topbar { display: flex; align-items: center; justify-content: space-between; min-height: 68px; padding: 18px 26px 16px; border-bottom: 1px solid var(--border); background: rgba(255, 255, 255, .86); }
@@ -421,6 +427,18 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 #projectDialog { width: min(540px, calc(100vw - 32px)); }
 #personDialog { width: min(580px, calc(100vw - 32px)); }
 #reportNotesDialog { width: min(620px, calc(100vw - 32px)); }
+.storage-dialog { width: min(620px, calc(100vw - 32px)); }
+.storage-dialog-avatar .icon { width: 18px; height: 18px; }
+.storage-current-card, .storage-selection { min-width: 0; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel); }
+.storage-selection { margin-top: 12px; border-color: #DCD6FF; background: var(--primary-soft); }
+.storage-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--text); font-size: 12px; font-weight: 700; }
+.storage-status { flex: 0 0 auto; padding: 3px 7px; border-radius: 999px; background: var(--success-soft); color: var(--success); font-size: 10px; font-weight: 750; text-transform: uppercase; letter-spacing: .04em; }
+.storage-selection .storage-status { background: #E8E4FF; color: var(--primary); }
+.storage-path { display: block; max-width: 100%; margin-top: 8px; overflow-wrap: anywhere; word-break: break-word; color: var(--text); font-family: "Segoe UI", system-ui, sans-serif; font-size: 12px; line-height: 1.45; white-space: pre-wrap; }
+.storage-helper, .storage-selection-hint, .storage-browser-note { margin: 13px 0 0; color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
+.storage-selection-hint { margin-top: 9px; }
+.storage-browser-note { padding: 12px 14px; border: 1px solid #DDE3F2; border-radius: 9px; background: #F4F7FC; color: var(--text); }
+.storage-actions { flex-wrap: wrap; }
 .unsaved-task-copy { margin: 0 24px 20px; color: var(--text-secondary); line-height: 1.5; }
 .unsaved-dialog { width: min(440px, calc(100vw - 32px)); }
 .action-confirm-dialog { width: min(500px, calc(100vw - 32px)); }

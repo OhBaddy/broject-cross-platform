@@ -4,6 +4,7 @@ use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::{Command, Output};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -16,11 +17,32 @@ pub struct LoadResponse {
     pub recovery_message: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct StorageLocation {
+    pub directory: String,
+    pub is_default: bool,
+    pub contains_workspace: bool,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct StorageInspection {
+    pub directory: String,
+    pub is_default: bool,
+    pub contains_workspace: bool,
+    pub has_primary: bool,
+    pub has_backup: bool,
+    pub has_corrupt: bool,
+    pub has_log: bool,
+}
+
 #[derive(Debug, Clone)]
 struct StoragePaths {
     data: PathBuf,
     backup: PathBuf,
     corrupt: PathBuf,
+    log: PathBuf,
 }
 
 pub fn load_workspace() -> Result<LoadResponse, String> {
@@ -38,40 +60,99 @@ pub fn save_workspace(state_json: &str) -> Result<(), String> {
 }
 
 pub fn write_error_log(error: &str) {
-    let Ok(directory) =
-        default_paths().map(|paths| paths.data.parent().unwrap_or(Path::new(".")).to_path_buf())
-    else {
-        return;
-    };
-    if fs::create_dir_all(&directory).is_err() {
-        return;
+    let message = format!("[{}] {}\n\n", timestamp_label(), error);
+    let mut directories = Vec::new();
+    if let Ok(directory) = active_data_directory() {
+        directories.push(directory);
     }
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        if fs::set_permissions(&directory, std::fs::Permissions::from_mode(0o700)).is_err() {
+    if let Ok(directory) = application_directory() {
+        if !directories
+            .iter()
+            .any(|candidate| same_directory(candidate, &directory))
+        {
+            directories.push(directory);
+        }
+    }
+
+    for directory in directories {
+        if fs::create_dir_all(&directory).is_err() {
+            continue;
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if fs::set_permissions(&directory, std::fs::Permissions::from_mode(0o700)).is_err() {
+                continue;
+            }
+        }
+        let path = directory.join("broject-error.log");
+        let result = fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .and_then(|mut file| {
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    let _ = file.set_permissions(std::fs::Permissions::from_mode(0o600));
+                }
+                use std::io::Write;
+                file.write_all(message.as_bytes())
+            });
+        if result.is_ok() {
             return;
         }
     }
-    let path = directory.join("broject-error.log");
-    let message = format!("[{}] {}\n\n", timestamp_label(), error);
-    let _ = fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(path)
-        .and_then(|mut file| {
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::PermissionsExt;
-                let _ = file.set_permissions(std::fs::Permissions::from_mode(0o600));
-            }
-            use std::io::Write;
-            file.write_all(message.as_bytes())
-        });
 }
 
 fn default_paths() -> Result<StoragePaths, String> {
-    Ok(paths_for_directory(application_directory()?))
+    Ok(paths_for_directory(active_data_directory()?))
+}
+
+pub fn get_storage_location() -> Result<StorageLocation, String> {
+    let directory = active_data_directory()?;
+    storage_location_for_directory(&directory)
+}
+
+pub fn choose_storage_location() -> Result<Option<StorageLocation>, String> {
+    let Some(directory) = choose_data_directory()? else {
+        return Ok(None);
+    };
+    let directory = validate_directory_path(directory)?;
+    storage_location_for_directory(&directory).map(Some)
+}
+
+pub fn inspect_storage_location(directory: &str) -> Result<StorageInspection, String> {
+    let directory = validate_directory_path(PathBuf::from(directory))?;
+    inspect_directory(&directory)
+}
+
+pub fn set_storage_location(directory: &str, mode: &str) -> Result<StorageLocation, String> {
+    if !matches!(mode, "copy" | "use-existing") {
+        return Err("Modalità di cambio cartella non valida.".to_string());
+    }
+
+    let target = validate_directory_path(PathBuf::from(directory))?;
+    let source = active_data_directory()?;
+    if same_directory(&source, &target) {
+        return storage_location_for_directory(&target);
+    }
+
+    let source_inspection = inspect_directory(&source)?;
+    let target_inspection = inspect_directory(&target)?;
+    if mode == "copy" && target_inspection.has_any_broject_file() {
+        return Err("La cartella scelta contiene già file di Broject. Scegli una cartella vuota oppure usa i dati esistenti.".to_string());
+    }
+
+    ensure_writable_directory(&target)?;
+    if mode == "copy" && source_inspection.contains_workspace {
+        copy_storage_files(
+            &paths_for_directory(source),
+            &paths_for_directory(target.clone()),
+        )?;
+    }
+    write_storage_settings(&target)?;
+    storage_location_for_directory(&target)
 }
 
 pub fn application_directory() -> Result<PathBuf, String> {
@@ -116,8 +197,310 @@ fn paths_for_directory(directory: PathBuf) -> StoragePaths {
     StoragePaths {
         backup: PathBuf::from(format!("{}.bak", data.display())),
         corrupt: PathBuf::from(format!("{}.corrupt", data.display())),
+        log: directory.join("broject-error.log"),
         data,
     }
+}
+
+fn settings_path() -> Result<PathBuf, String> {
+    Ok(application_directory()?.join("broject-settings.json"))
+}
+
+fn active_data_directory() -> Result<PathBuf, String> {
+    let default = application_directory()?;
+    let path = settings_path()?;
+    match read_storage_settings_at(&path)? {
+        Some(directory) => Ok(directory),
+        None => Ok(default),
+    }
+}
+
+fn write_storage_settings(directory: &Path) -> Result<(), String> {
+    write_storage_settings_at(&settings_path()?, directory)
+}
+
+fn read_storage_settings_at(path: &Path) -> Result<Option<PathBuf>, String> {
+    match fs::read_to_string(path) {
+        Ok(contents) => {
+            let value: Value = serde_json::from_str(&contents)
+                .map_err(|error| format!("Configurazione cartella dati non valida: {error}"))?;
+            let directory = value
+                .get("dataDirectory")
+                .and_then(Value::as_str)
+                .filter(|value| !value.trim().is_empty())
+                .ok_or("Configurazione cartella dati non valida: directory mancante")?;
+            validate_directory_path(PathBuf::from(directory)).map(Some)
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(format!(
+            "Impossibile leggere la configurazione della cartella dati: {error}"
+        )),
+    }
+}
+
+fn write_storage_settings_at(path: &Path, directory: &Path) -> Result<(), String> {
+    let application_directory = path
+        .parent()
+        .ok_or("Directory configurazione non disponibile")?;
+    fs::create_dir_all(application_directory)
+        .map_err(|error| format!("Impossibile creare la configurazione di Broject: {error}"))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(
+            &application_directory,
+            std::fs::Permissions::from_mode(0o700),
+        )
+        .map_err(|error| format!("Impossibile proteggere la configurazione di Broject: {error}"))?;
+    }
+
+    let temporary = application_directory.join(format!("broject-settings.{}.tmp", unique_suffix()));
+    let contents = serde_json::to_string_pretty(&json!({
+        "dataDirectory": directory.to_string_lossy()
+    }))
+    .map_err(|error| format!("Impossibile serializzare la configurazione dati: {error}"))?;
+    fs::write(&temporary, contents)
+        .map_err(|error| format!("Impossibile scrivere la configurazione dati: {error}"))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&temporary, std::fs::Permissions::from_mode(0o600))
+            .map_err(|error| format!("Impossibile proteggere la configurazione dati: {error}"))?;
+    }
+    let result = replace_file_atomically(&temporary, path);
+    let _ = fs::remove_file(&temporary);
+    result
+}
+
+fn validate_directory_path(directory: PathBuf) -> Result<PathBuf, String> {
+    if !directory.is_absolute() {
+        return Err("La cartella dati deve essere un percorso assoluto.".to_string());
+    }
+    match fs::metadata(&directory) {
+        Ok(metadata) if metadata.is_dir() => Ok(directory),
+        Ok(_) => Err(format!(
+            "La destinazione esiste ma non è una cartella: {}",
+            directory.display()
+        )),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(directory),
+        Err(error) => Err(format!(
+            "Impossibile controllare la cartella dati {}: {error}",
+            directory.display()
+        )),
+    }
+}
+
+fn same_directory(left: &Path, right: &Path) -> bool {
+    #[cfg(windows)]
+    {
+        return left
+            .to_string_lossy()
+            .eq_ignore_ascii_case(&right.to_string_lossy());
+    }
+    #[cfg(not(windows))]
+    {
+        left == right
+    }
+}
+
+fn inspect_directory(directory: &Path) -> Result<StorageInspection, String> {
+    let directory = validate_directory_path(directory.to_path_buf())?;
+    let paths = paths_for_directory(directory.clone());
+    let has_primary = path_exists(&paths.data)?;
+    let has_backup = path_exists(&paths.backup)?;
+    let has_corrupt = path_exists(&paths.corrupt)?;
+    let has_log = path_exists(&paths.log)?;
+    Ok(StorageInspection {
+        directory: directory.to_string_lossy().into_owned(),
+        is_default: same_directory(&directory, &application_directory()?),
+        contains_workspace: has_primary || has_backup || has_corrupt,
+        has_primary,
+        has_backup,
+        has_corrupt,
+        has_log,
+    })
+}
+
+fn storage_location_for_directory(directory: &Path) -> Result<StorageLocation, String> {
+    let inspection = inspect_directory(directory)?;
+    Ok(StorageLocation {
+        directory: inspection.directory,
+        is_default: inspection.is_default,
+        contains_workspace: inspection.contains_workspace,
+    })
+}
+
+impl StorageInspection {
+    fn has_any_broject_file(&self) -> bool {
+        self.has_primary || self.has_backup || self.has_corrupt || self.has_log
+    }
+}
+
+fn ensure_writable_directory(directory: &Path) -> Result<(), String> {
+    fs::create_dir_all(directory)
+        .map_err(|error| format!("Impossibile creare la cartella dati: {error}"))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(directory, std::fs::Permissions::from_mode(0o700))
+            .map_err(|error| format!("Impossibile proteggere la cartella dati: {error}"))?;
+    }
+    let probe = directory.join(format!(".broject-write-test-{}.tmp", unique_suffix()));
+    fs::write(&probe, b"")
+        .map_err(|error| format!("La cartella dati non è scrivibile: {error}"))?;
+    let _ = fs::remove_file(probe);
+    Ok(())
+}
+
+fn copy_storage_files(source: &StoragePaths, target: &StoragePaths) -> Result<(), String> {
+    let files = [
+        (&source.data, &target.data),
+        (&source.backup, &target.backup),
+        (&source.corrupt, &target.corrupt),
+        (&source.log, &target.log),
+    ];
+    let mut published = Vec::new();
+    for (source_path, target_path) in files {
+        if !path_exists(source_path)? {
+            continue;
+        }
+        let temporary = target_path.with_file_name(format!(
+            ".{}.migration-{}.tmp",
+            target_path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("broject-data"),
+            unique_suffix()
+        ));
+        let copy_result = fs::copy(source_path, &temporary).map_err(|error| {
+            format!(
+                "Impossibile copiare {} nella nuova cartella: {error}",
+                source_path.display()
+            )
+        });
+        if let Err(error) = copy_result {
+            let _ = fs::remove_file(&temporary);
+            cleanup_published_files(&published);
+            return Err(error);
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if let Err(error) =
+                fs::set_permissions(&temporary, std::fs::Permissions::from_mode(0o600))
+            {
+                let _ = fs::remove_file(&temporary);
+                cleanup_published_files(&published);
+                return Err(format!("Impossibile proteggere la copia dati: {error}"));
+            }
+        }
+        if target_path == &target.data && read_json(&temporary).is_err() {
+            let _ = fs::remove_file(&temporary);
+            cleanup_published_files(&published);
+            return Err("Il file dati esistente non è un JSON di workspace valido.".to_string());
+        }
+        if let Err(error) = replace_file_atomically(&temporary, target_path) {
+            let _ = fs::remove_file(&temporary);
+            cleanup_published_files(&published);
+            return Err(error);
+        }
+        published.push(target_path.to_path_buf());
+    }
+    Ok(())
+}
+
+fn cleanup_published_files(files: &[PathBuf]) {
+    for path in files {
+        let _ = fs::remove_file(path);
+    }
+}
+
+fn selected_path(output: &Output) -> Option<PathBuf> {
+    let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    (!path.is_empty()).then(|| PathBuf::from(path))
+}
+
+#[cfg(windows)]
+fn choose_data_directory() -> Result<Option<PathBuf>, String> {
+    let title = powershell_literal("Scegli la cartella dati di Broject");
+    let script = format!(
+        "Add-Type -AssemblyName System.Windows.Forms; $dialog = New-Object System.Windows.Forms.FolderBrowserDialog; $dialog.Description = '{title}'; $dialog.ShowNewFolderButton = $true; if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {{ [Console]::Write($dialog.SelectedPath) }}"
+    );
+    let output = Command::new("powershell.exe")
+        .args(["-NoProfile", "-STA", "-Command"])
+        .arg(&script)
+        .output()
+        .map_err(|error| format!("Il dialogo cartella non è disponibile: {error}"))?;
+    if !output.status.success() {
+        return Err("Il dialogo cartella non è disponibile.".to_string());
+    }
+    Ok(selected_path(&output))
+}
+
+#[cfg(target_os = "macos")]
+fn choose_data_directory() -> Result<Option<PathBuf>, String> {
+    let script = "try\nset selectedFolder to choose folder with prompt \"Scegli la cartella dati di Broject\"\nreturn POSIX path of selectedFolder\non error number -128\nreturn \"\"\nend try";
+    let output = Command::new("osascript")
+        .args(["-e", script])
+        .output()
+        .map_err(|error| format!("Il dialogo cartella non è disponibile: {error}"))?;
+    if !output.status.success() {
+        return Err("Il dialogo cartella non è disponibile.".to_string());
+    }
+    Ok(selected_path(&output))
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+fn choose_data_directory() -> Result<Option<PathBuf>, String> {
+    let title = "--title=Scegli la cartella dati di Broject";
+    if let Some(output) = command_output("zenity", &["--file-selection", "--directory", title])? {
+        if output.status.success() {
+            return Ok(selected_path(&output));
+        }
+        if output.status.code() == Some(1) && output.stderr.is_empty() {
+            return Ok(None);
+        }
+    }
+
+    if let Some(output) = command_output(
+        "kdialog",
+        &[
+            "--getexistingdirectory",
+            "",
+            "--title",
+            "Scegli la cartella dati di Broject",
+        ],
+    )? {
+        if output.status.success() {
+            return Ok(selected_path(&output));
+        }
+        if output.status.code() == Some(1) && output.stderr.is_empty() {
+            return Ok(None);
+        }
+    }
+
+    Err("Nessun dialogo cartella disponibile (installa Zenity o KDE Dialog).".to_string())
+}
+
+#[cfg(not(any(windows, unix)))]
+fn choose_data_directory() -> Result<Option<PathBuf>, String> {
+    Err("Il dialogo cartella non è supportato su questo sistema.".to_string())
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+fn command_output(program: &str, args: &[&str]) -> Result<Option<Output>, String> {
+    match Command::new(program).args(args).output() {
+        Ok(output) => Ok(Some(output)),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(format!(
+            "Il dialogo cartella non è disponibile ({program}): {error}"
+        )),
+    }
+}
+
+#[cfg(windows)]
+fn powershell_literal(value: &str) -> String {
+    value.replace('\'', "''")
 }
 
 fn load_from_paths(paths: &StoragePaths) -> Result<LoadResponse, String> {
@@ -598,5 +981,93 @@ mod tests {
             4
         );
         assert!(task.get("AssigneePersonId").is_none());
+    }
+
+    #[test]
+    fn storage_settings_round_trip_and_reject_invalid_directory() {
+        let root = env::temp_dir().join(format!("broject-rust-settings-{}", unique_suffix()));
+        let settings = root.join("config").join("broject-settings.json");
+        let selected = root.join("selected");
+
+        assert_eq!(read_storage_settings_at(&settings).unwrap(), None);
+        write_storage_settings_at(&settings, &selected).unwrap();
+        assert_eq!(
+            read_storage_settings_at(&settings).unwrap(),
+            Some(selected.clone())
+        );
+
+        fs::write(&settings, r#"{"dataDirectory":"relative"}"#).unwrap();
+        assert!(read_storage_settings_at(&settings).is_err());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn inspect_directory_reports_workspace_files_without_creating_it() {
+        let paths = test_paths("inspect");
+        let directory = paths.data.parent().unwrap();
+        let inspection = inspect_directory(directory).unwrap();
+
+        assert!(!inspection.contains_workspace);
+        assert!(!directory.exists());
+
+        fs::create_dir_all(directory).unwrap();
+        fs::write(
+            &paths.data,
+            r#"{"SchemaVersion":3,"Projects":[],"People":[],"Tasks":[]}"#,
+        )
+        .unwrap();
+        fs::write(&paths.backup, "backup").unwrap();
+        fs::write(&paths.log, "log").unwrap();
+        let inspection = inspect_directory(directory).unwrap();
+        assert!(inspection.contains_workspace);
+        assert!(inspection.has_primary);
+        assert!(inspection.has_backup);
+        assert!(!inspection.has_corrupt);
+        assert!(inspection.has_log);
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn copy_storage_files_preserves_recovery_files_and_validates_primary() {
+        let source = test_paths("copy-source");
+        let target = test_paths("copy-target");
+        fs::create_dir_all(source.data.parent().unwrap()).unwrap();
+        fs::write(
+            &source.data,
+            r#"{"SchemaVersion":3,"Projects":[],"People":[],"Tasks":[]}"#,
+        )
+        .unwrap();
+        fs::write(&source.backup, "backup").unwrap();
+        fs::write(&source.corrupt, "corrupt").unwrap();
+        fs::write(&source.log, "log").unwrap();
+        fs::create_dir_all(target.data.parent().unwrap()).unwrap();
+
+        copy_storage_files(&source, &target).unwrap();
+
+        assert_eq!(
+            fs::read_to_string(&target.data).unwrap(),
+            fs::read_to_string(&source.data).unwrap()
+        );
+        assert_eq!(fs::read_to_string(&target.backup).unwrap(), "backup");
+        assert_eq!(fs::read_to_string(&target.corrupt).unwrap(), "corrupt");
+        assert_eq!(fs::read_to_string(&target.log).unwrap(), "log");
+        let _ = fs::remove_dir_all(source.data.parent().unwrap());
+        let _ = fs::remove_dir_all(target.data.parent().unwrap());
+    }
+
+    #[test]
+    fn copy_storage_files_removes_partial_output_after_invalid_primary() {
+        let source = test_paths("copy-invalid-source");
+        let target = test_paths("copy-invalid-target");
+        fs::create_dir_all(source.data.parent().unwrap()).unwrap();
+        fs::write(&source.data, "broken").unwrap();
+        fs::write(&source.backup, "backup").unwrap();
+        fs::create_dir_all(target.data.parent().unwrap()).unwrap();
+
+        assert!(copy_storage_files(&source, &target).is_err());
+        assert!(!target.data.exists());
+        assert!(!target.backup.exists());
+        let _ = fs::remove_dir_all(source.data.parent().unwrap());
+        let _ = fs::remove_dir_all(target.data.parent().unwrap());
     }
 }

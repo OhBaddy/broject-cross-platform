@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#171A2F" />
+    <title>Broject — il lavoro, finalmente chiaro</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <svg class="icon-defs" aria-hidden="true" focusable="false">
+      <symbol id="icon-overview" viewBox="0 0 20 20"><path d="M2 2h6v6H2zM12 2h6v6h-6zM2 12h6v6H2zM12 12h6v6h-6z" /></symbol>
+      <symbol id="icon-work" viewBox="0 0 20 20"><path d="m2 4 2 2 3-4m3 2h8M2 12l2 2 3-4m3 2h8m-8 4h8" /></symbol>
+      <symbol id="icon-people" viewBox="0 0 20 20"><circle cx="7" cy="5" r="3" /><path d="M1.5 18v-2.5c0-3.7 11-3.7 11 0V18M14 3c4 0 4 6 0 6m1 3c3.5 0 4 3 4 6" /></symbol>
+      <symbol id="icon-report" viewBox="0 0 20 20"><path d="M2 1.5h10l5 5V18.5H2zM12 1.5v5h5M5 10h9M5 14h9" /></symbol>
+      <symbol id="icon-search" viewBox="0 0 20 20"><circle cx="8.5" cy="8.5" r="5.5" /><path d="m13 13 5 5" /></symbol>
+      <symbol id="icon-help" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" /><path d="M7.5 7.5a2.5 2.5 0 1 1 4.2 1.8c-1 .8-1.7 1.2-1.7 2.7M10 15.5h.01" /></symbol>
+      <symbol id="icon-chevron" viewBox="0 0 20 20"><path d="m7 4 6 6-6 6" /></symbol>
+      <symbol id="icon-calendar" viewBox="0 0 20 20"><rect x="2" y="3.5" width="16" height="14" rx="2" /><path d="M6 2v3M14 2v3M2 8h16" /></symbol>
+      <symbol id="icon-filter" viewBox="0 0 20 20"><path d="M2 4h16M4.5 10h11M7 16h6" /></symbol>
+      <symbol id="icon-plus" viewBox="0 0 20 20"><path d="M10 3v14M3 10h14" /></symbol>
+      <symbol id="icon-close" viewBox="0 0 20 20"><path d="m4 4 12 12M16 4 4 16" /></symbol>
+      <symbol id="icon-more" viewBox="0 0 20 20"><circle cx="4" cy="10" r="1" /><circle cx="10" cy="10" r="1" /><circle cx="16" cy="10" r="1" /></symbol>
+      <symbol id="icon-arrow-left" viewBox="0 0 20 20"><path d="M16 10H4m5-5-5 5 5 5" /></symbol>
+      <symbol id="icon-arrow-right" viewBox="0 0 20 20"><path d="M4 10h12m-5-5 5 5-5 5" /></symbol>
+    </svg>
+
+    <section id="startupFailure" class="startup-failure is-hidden" role="alert" aria-labelledby="startupFailureTitle" aria-describedby="startupFailureMessage startupFailureDetail">
+      <div class="startup-failure-card">
+        <div class="startup-failure-mark" aria-hidden="true">!</div>
+        <p class="startup-failure-eyebrow">Avvio non riuscito</p>
+        <h1 id="startupFailureTitle">Broject non è riuscito ad avviarsi.</h1>
+        <p id="startupFailureMessage">I dati locali non sono stati modificati.</p>
+        <p class="startup-failure-detail" id="startupFailureDetail"></p>
+        <button class="primary-button" id="retryStartupButton" type="button">Riprova</button>
+      </div>
+    </section>
+
+    <div class="app-shell" id="appShell">
+      <aside class="sidebar" aria-label="Navigazione workspace">
+        <div class="brand-block">
+          <div class="brand-mark" aria-hidden="true">B</div>
+          <div>
+            <div class="brand-name">broject</div>
+            <div class="brand-tagline">Il lavoro, in ordine</div>
+          </div>
+        </div>
+
+        <div class="workspace-chip">
+          <div class="workspace-mark" aria-hidden="true">W</div>
+          <div>
+            <div class="workspace-title">Workspace principale</div>
+            <div class="workspace-subtitle">Privato · sul dispositivo</div>
+          </div>
+        </div>
+
+        <nav class="primary-nav" aria-label="Sezioni principali">
+          <button class="nav-button is-active" data-section="overview" type="button">
+            <svg class="icon" aria-hidden="true"><use href="#icon-overview" /></svg><span>Panoramica</span>
+          </button>
+          <button class="nav-button" data-section="my-work" type="button">
+            <svg class="icon" aria-hidden="true"><use href="#icon-work" /></svg><span>Il mio lavoro</span>
+          </button>
+          <button class="nav-button" data-section="people" type="button">
+            <svg class="icon" aria-hidden="true"><use href="#icon-people" /></svg><span>Persone</span>
+          </button>
+          <button class="nav-button" data-section="reports" type="button">
+            <svg class="icon" aria-hidden="true"><use href="#icon-report" /></svg><span>Report</span>
+          </button>
+        </nav>
+
+        <div class="project-nav-section">
+          <div class="section-label-row">
+            <span>Progetti</span>
+            <button class="icon-button icon-button-dark" id="newProjectButton" type="button" title="Nuovo progetto" aria-label="Nuovo progetto">
+              +
+            </button>
+          </div>
+          <div class="project-nav-list" id="projectNavList" aria-label="Progetti"></div>
+        </div>
+
+        <div class="sidebar-footer">
+          <div class="local-mark" aria-hidden="true">L</div>
+          <div>
+            <div class="workspace-title">Workspace locale</div>
+            <div class="workspace-subtitle">Dati salvati sul dispositivo</div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="workspace-main">
+        <header class="topbar">
+          <div class="page-heading">
+            <h1 id="pageTitle">Panoramica</h1>
+            <p id="pageSubtitle">Priorità e avanzamento</p>
+          </div>
+          <div class="topbar-actions">
+            <label class="global-search" for="globalSearch">
+              <svg class="icon" aria-hidden="true"><use href="#icon-search" /></svg>
+              <input id="globalSearch" type="search" autocomplete="off" placeholder="Cerca ovunque · Ctrl+K" title="Cerca attività, progetti o persone (Ctrl+K)" aria-label="Cerca in tutto il workspace" />
+            </label>
+            <button class="primary-button create-button" id="quickCreateButton" type="button" title="Crea" aria-label="Crea una nuova attività">
+              +
+            </button>
+            <button class="icon-button" id="helpButton" type="button" title="Guida rapida · Guida all’utilizzo" aria-label="Apri la guida rapida e all’utilizzo">
+              ?
+            </button>
+          </div>
+        </header>
+
+        <div class="recovery-banner is-hidden" id="recoveryBanner" role="status" aria-live="assertive"></div>
+
+        <section class="content-scroller" id="contentScroller">
+          <div class="view-panel" id="overviewView" data-view="overview">
+            <div class="view-intro">
+              <div>
+                <h2 id="overviewGreetingText">Il lavoro di oggi</h2>
+                <p id="overviewHintText">Parti dalle priorità. Il resto è qui quando serve.</p>
+                <div class="muted-line" id="weekRangeText"></div>
+              </div>
+              <button class="primary-button" id="overviewCreateButton" type="button"><svg class="icon" aria-hidden="true"><use href="#icon-plus" /></svg> Nuova attività</button>
+            </div>
+
+            <div class="welcome-panel section-card is-hidden" id="welcomePanel">
+              <div>
+                <h3>Un progetto. Una prima attività. Si comincia.</h3>
+                <p>Crea il progetto, aggiungi ciò che vuoi fare e assegna le persone. I dati restano su questo dispositivo.</p>
+              </div>
+              <button class="primary-button" id="firstProjectButton" type="button">Crea il primo progetto</button>
+            </div>
+
+            <div class="kpi-grid" id="summaryKpis"></div>
+
+            <div class="overview-grid">
+              <section class="section-card focus-card">
+                <div class="card-heading">
+                  <div><h3>Da affrontare per prime</h3><p>Scadenze e attività che meritano attenzione</p></div>
+                  <button class="text-button" data-section="my-work" type="button">Vedi tutto <svg class="icon" aria-hidden="true"><use href="#icon-chevron" /></svg></button>
+                </div>
+                <div class="card-list" id="focusList"></div>
+                <div class="empty-state is-hidden" id="focusEmpty">Nessuna scadenza vicina. Apri Il mio lavoro per pianificare le prossime attività.</div>
+              </section>
+              <section class="section-card">
+                <div class="card-heading"><div><h3>Progetti</h3><p>Avanzamento complessivo</p></div><button class="icon-button" id="overviewNewProjectButton" type="button" title="Nuovo progetto" aria-label="Nuovo progetto">+</button></div>
+                <div class="card-list" id="overviewProjectList"></div>
+                <div class="empty-state is-hidden" id="overviewProjectsEmpty">Crea un progetto per iniziare a organizzare il lavoro.</div>
+              </section>
+            </div>
+
+            <div class="overview-grid overview-grid-three">
+              <section class="section-card status-summary-card">
+                <div class="card-heading"><div><h3>Distribuzione stato</h3><p>Tutte le attività del workspace</p></div></div>
+                <div class="status-summary-list" id="statusSummaryList"></div>
+              </section>
+              <section class="section-card">
+                <div class="card-heading"><div><h3>Completate questa settimana</h3></div></div>
+                <div class="card-list" id="weeklySummaryList"></div>
+                <div class="empty-state is-hidden" id="weeklyEmpty">Ancora nessuna attività completata.</div>
+              </section>
+              <section class="section-card">
+                <div class="card-heading"><div><h3>Attività recente</h3><p>Ultime attività aggiornate</p></div></div>
+                <div class="activity-list" id="activityList"></div>
+                <div class="empty-state is-hidden" id="activityEmpty">Crea il primo progetto per iniziare.</div>
+              </section>
+            </div>
+          </div>
+
+          <div class="view-panel is-hidden" id="projectView" data-view="project">
+            <div class="project-heading">
+              <div class="project-heading-main">
+                <div class="project-accent" id="projectAccent" aria-hidden="true"></div>
+                <div><h2 id="projectTitle">Progetto</h2><p id="projectDescription">Attività del progetto</p></div>
+              </div>
+              <div class="project-heading-actions">
+                <button class="secondary-button" id="exportProjectHeaderButton" type="button">Esporta</button>
+                <button class="secondary-button" id="editProjectButton" type="button">Modifica</button>
+                <button class="danger-button" id="deleteProjectHeaderButton" type="button">Elimina</button>
+              </div>
+              <div class="project-progress-row"><div class="project-progress-meter"><div class="project-progress-track"><div id="projectProgressBar" role="progressbar" aria-label="Avanzamento progetto" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div></div><strong id="projectProgressText">0%</strong></div><span class="project-status-pill" id="projectStatusText">Da configurare</span></div>
+            </div>
+            <div class="project-toolbar">
+              <div class="view-toggle" role="group" aria-label="Vista progetto">
+                <button class="toggle-button is-active" data-project-view="board" type="button">Bacheca</button>
+                <button class="toggle-button" data-project-view="list" type="button">Elenco</button>
+                <button class="toggle-button" data-project-view="calendar" type="button">Settimana</button>
+              </div>
+              <button class="primary-button" id="addTaskButton" type="button">+ Aggiungi attività</button>
+            </div>
+            <div class="filter-bar">
+              <label class="local-search" for="projectSearch"><svg class="icon" aria-hidden="true"><use href="#icon-search" /></svg><input id="projectSearch" type="search" placeholder="Cerca task..." aria-label="Cerca attività nel progetto" /></label>
+              <label class="select-wrap"><span class="sr-only">Filtra per stato</span><select id="statusFilter" aria-label="Filtra per stato"><option value="">Tutti gli stati</option><option value="Todo">Da fare</option><option value="Doing">In corso</option><option value="Done">Completate</option></select></label>
+              <label class="select-wrap"><span class="sr-only">Filtra per persona</span><select id="personFilter" aria-label="Filtra per persona"><option value="">Tutte le persone</option><option value="unassigned">Non assegnate</option></select></label>
+              <button class="text-button" id="resetFiltersButton" type="button" disabled><svg class="icon" aria-hidden="true"><use href="#icon-filter" /></svg> Azzera filtri</button>
+              <span class="filter-count" id="filterCountText"></span>
+            </div>
+
+            <div class="project-view project-board" id="boardProjectView">
+              <section class="board-column todo-column"><div class="column-heading"><span class="column-status-dot" aria-hidden="true"></span><h3>Da fare</h3><span id="todoCount">0</span></div><div class="task-stack" id="todoList" data-status="Todo"></div><div class="empty-state is-hidden" id="todoEmpty">Nessuna attività da fare. Usa Aggiungi attività per iniziare.</div></section>
+              <section class="board-column doing-column"><div class="column-heading"><span class="column-status-dot" aria-hidden="true"></span><h3>In corso</h3><span id="doingCount">0</span></div><div class="task-stack" id="doingList" data-status="Doing"></div><div class="empty-state is-hidden" id="doingEmpty">Nessuna attività in corso. Sposta qui un’attività quando inizi.</div></section>
+              <section class="board-column done-column"><div class="column-heading"><span class="column-status-dot" aria-hidden="true"></span><h3>Completate</h3><span id="doneCount">0</span></div><div class="task-stack" id="doneList" data-status="Done"></div><div class="empty-state is-hidden" id="doneEmpty">Quando completi un’attività, la ritrovi qui.</div></section>
+            </div>
+
+            <div class="project-view is-hidden" id="listProjectView">
+              <div class="table-card">
+                <table class="task-table" id="tasksTable" aria-label="Attività del progetto"><thead><tr><th>ATTIVITÀ</th><th>STATO</th><th>PERSONE</th><th>PRIORITÀ</th><th>SCADENZA</th><th><span class="sr-only">Azioni</span></th></tr></thead><tbody id="tasksTableBody"></tbody></table>
+                <div class="empty-state is-hidden" id="listEmpty">Nessuna attività visibile. Aggiungi un’attività oppure azzera i filtri.</div>
+              </div>
+            </div>
+
+            <div class="project-view is-hidden" id="calendarProjectView">
+              <div class="calendar-toolbar"><div class="calendar-nav"><button class="icon-button calendar-nav-button" id="previousWeekButton" type="button" title="Settimana precedente" aria-label="Vai alla settimana precedente"><span class="wpf-chevron" aria-hidden="true">‹</span></button><button class="icon-button calendar-nav-button" id="nextWeekButton" type="button" title="Settimana successiva" aria-label="Vai alla settimana successiva"><span class="wpf-chevron" aria-hidden="true">›</span></button><strong id="calendarRangeText"></strong></div><button class="text-button calendar-current-button" id="currentWeekButton" type="button">Settimana corrente</button></div>
+              <div class="calendar-scroll-frame" id="calendarScrollFrame">
+                <div class="calendar-scroll-hint is-hidden" id="calendarScrollHint"><span id="calendarScrollHintText">Scorri per vedere gli altri giorni</span><span aria-hidden="true">→</span></div>
+                <div class="calendar-grid" id="calendarGrid"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="view-panel is-hidden" id="myWorkView" data-view="my-work">
+            <div class="view-intro"><div><h2>Il mio lavoro</h2><p>Scegli una persona per vedere il suo lavoro.</p></div><div class="view-intro-actions"><select id="myWorkPerson" aria-label="Mostra il lavoro di"><option value="">Tutte le persone</option><option value="unassigned">Non assegnate</option></select><button class="primary-button" id="myWorkCreateButton" type="button">+ Nuova attività</button></div></div>
+            <div class="kpi-grid" id="myWorkKpis"></div>
+            <div class="my-work-grid"><section class="section-card"><h3>Da pianificare</h3><div class="card-list" id="myTodoList"></div><div class="empty-state" id="myTodoEmpty">Nessuna attività da pianificare.</div></section><section class="section-card"><h3>In corso</h3><div class="card-list" id="myDoingList"></div><div class="empty-state" id="myDoingEmpty">Nessuna attività in corso. Sposta qui un’attività quando inizi.</div></section><section class="section-card"><h3>Scadenze vicine</h3><div class="card-list" id="myDueList"></div><div class="empty-state" id="myDueEmpty">Nessuna attività scaduta o in scadenza nei prossimi 7 giorni.</div></section></div>
+            <details class="completed-details section-card"><summary id="completedSummary">Completate (0)</summary><div class="card-list" id="myCompletedList"></div></details>
+          </div>
+
+          <div class="view-panel is-hidden" id="peopleView" data-view="people">
+            <div class="view-intro"><div><h2>Persone</h2><p>Ruoli, aziende e carico operativo in un solo posto.</p></div><button class="primary-button" id="addPersonButton" type="button">+ Aggiungi persona</button></div>
+            <div class="people-summary"><div class="stat-card"><span>Persone</span><strong id="peopleCount">0</strong></div><div class="stat-card"><span>Attività assegnate</span><strong id="peopleAssignedCount">0</strong></div><div class="stat-card people-workload"><span>Carico di lavoro</span><strong id="peopleWorkload">Aggiungi persone e assegna attività per vedere il carico.</strong></div></div>
+            <div class="people-grid" id="peopleList"></div><div class="empty-state section-card is-hidden" id="peopleEmpty">Nessuna persona. Usa Aggiungi persona per iniziare ad assegnare il lavoro.</div>
+          </div>
+
+          <div class="view-panel is-hidden" id="reportsView" data-view="reports">
+            <div class="view-intro"><div><h2>Report</h2><p>Scegli il perimetro e crea un report Excel modificabile.</p></div></div>
+            <div class="report-grid"><section class="section-card report-card"><div class="report-card-title"><div class="report-icon"><svg class="icon" aria-hidden="true"><use href="#icon-overview" /></svg></div><div><h3>Portfolio completo</h3><strong>Tutti i progetti</strong></div></div><p>KPI globali, stato dei progetti, lavoro completato, persone, rischi e scadenze. Tutto in un workbook Excel professionale.</p><button class="primary-button" id="exportPortfolioButton" type="button">Esporta report generale</button></section><section class="section-card report-card"><div class="report-card-title"><div class="report-icon"><svg class="icon" aria-hidden="true"><use href="#icon-report" /></svg></div><div><h3>Report progetto</h3><strong id="reportProjectName">Crea un progetto per esportarne il report.</strong></div></div><p>Dashboard, anagrafica, team, bacheca, dettaglio attività e note finali per il progetto selezionato.</p><label class="select-wrap report-select"><span class="sr-only">Progetto da esportare</span><select id="reportProjectSelect" aria-label="Progetto da esportare"><option value="">Seleziona un progetto</option></select></label><button class="primary-button" id="exportProjectButton" type="button" disabled>Esporta progetto selezionato</button></section></div>
+            <section class="section-card report-note"><h3>File completamente editabili</h3><p>Gli export .xlsx si aprono in Excel e LibreOffice e non richiedono componenti cloud.</p></section>
+          </div>
+
+          <div class="search-surface is-hidden" id="searchSurface" aria-live="polite">
+            <div class="view-intro"><div><h2>Risultati nel workspace</h2><p id="searchCountText"></p></div><button class="text-button" id="closeSearchButton" type="button">Chiudi ricerca</button></div>
+            <div class="search-results"><section id="searchTasksSection"><h3 id="searchTasksHeading">Attività</h3><div class="card-list" id="searchTaskItems"></div></section><section id="searchProjectsSection"><h3 id="searchProjectsHeading">Progetti</h3><div class="card-list" id="searchProjectItems"></div></section><section id="searchPeopleSection"><h3 id="searchPeopleHeading">Persone</h3><div class="people-grid" id="searchPersonItems"></div></section></div>
+            <div class="empty-state is-hidden" id="searchEmpty">Nessun risultato. Prova un titolo, un tag, un progetto o il nome di una persona.</div>
+          </div>
+        </section>
+
+        <div class="toast is-hidden" id="toast" role="alert" aria-live="assertive"><strong id="toastTitle">Operazione completata</strong><span id="toastMessage">Le modifiche sono state salvate.</span></div>
+        <div class="undo-bar is-hidden" id="undoBar"><span>Ultima eliminazione</span><button class="soft-button" id="undoButton" type="button" title="Ripristina l’ultima eliminazione di questa sessione">Annulla eliminazione</button></div>
+      </main>
+    </div>
+
+    <div class="busy-overlay is-hidden" id="busyOverlay" role="status" aria-live="polite"><div class="busy-card"><div class="spinner" role="progressbar" aria-label="Esportazione in corso"></div><h2>Preparazione del report…</h2><p>Attendi qualche istante. I tuoi dati restano sul dispositivo.</p></div></div>
+    <div class="drawer-backdrop is-hidden" id="drawerBackdrop"></div>
+    <aside class="task-drawer is-hidden" id="taskDrawer" aria-labelledby="editorTitle" aria-modal="true" role="dialog">
+      <header class="drawer-header"><div><h2 id="editorTitle">Nuova attività</h2><p id="editorState" aria-live="polite">Compila il titolo, poi salva.</p></div><button class="icon-button" id="closeDrawerButton" type="button" title="Chiudi (Esc)" aria-label="Chiudi editor attività">×</button></header>
+      <form class="drawer-form" id="taskForm" novalidate>
+        <div class="form-scroll">
+          <label class="field"><span>Titolo *</span><input id="taskTitle" name="title" required autocomplete="off" aria-label="Titolo attività, obbligatorio" /></label>
+          <label class="field"><span>Progetto</span><select id="taskProject" name="project" aria-label="Progetto dell’attività"></select></label>
+          <div class="field-row"><label class="field"><span>Stato</span><select id="taskStatus" name="status" aria-label="Stato attività"><option value="Todo">Da fare</option><option value="Doing">In corso</option><option value="Done">Completata</option></select></label><label class="field"><span>Priorità</span><select id="taskPriority" name="priority" aria-label="Priorità attività"><option value="Low">Bassa</option><option value="Medium" selected>Media</option><option value="High">Alta</option><option value="Urgent">Urgente</option></select></label></div>
+          <label class="field"><span>Scadenza</span><div class="date-picker-shell"><div class="date-picker-control"><input id="taskDueDate" name="dueDate" type="text" inputmode="numeric" placeholder="gg/mm/aaaa" autocomplete="off" aria-label="Scadenza, facoltativa" /><button class="date-picker-trigger" id="taskDueDateCalendarButton" type="button" aria-label="Apri calendario scadenza" aria-controls="taskDueDateCalendar" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#icon-calendar" /></svg></button></div><div class="date-picker-calendar is-hidden" id="taskDueDateCalendar" role="dialog" aria-label="Calendario scadenza"><div class="date-picker-calendar-header"><button class="micro-button" id="taskDueDatePreviousMonth" type="button" aria-label="Mese precedente"><svg class="icon" aria-hidden="true"><use href="#icon-arrow-left" /></svg></button><strong id="taskDueDateCalendarTitle"></strong><button class="micro-button" id="taskDueDateNextMonth" type="button" aria-label="Mese successivo"><svg class="icon" aria-hidden="true"><use href="#icon-arrow-right" /></svg></button></div><div class="date-picker-weekdays" aria-hidden="true"><span>Lun</span><span>Mar</span><span>Mer</span><span>Gio</span><span>Ven</span><span>Sab</span><span>Dom</span></div><div class="date-picker-days" id="taskDueDateCalendarDays" role="grid"></div></div></div><small>Facoltativa. Lascia vuoto se non è ancora definita.</small></label>
+          <span class="assignee-label">Persone assegnate</span><details class="field assignee-field" id="assigneePicker" aria-label="Mostra o nascondi le persone assegnabili"><summary><span class="assignee-summary" id="taskAssigneesSummary">Nessuna persona</span><span class="assignee-select-label">Seleziona</span></summary><div class="assignee-list" id="taskAssignees"></div><div class="empty-state is-hidden" id="assigneesEmpty">Nessuna persona nel workspace. Puoi aggiungerla dalla sezione Persone dopo aver salvato.</div></details>
+          <label class="field"><span>Note</span><textarea id="taskNotes" name="notes" rows="5" aria-label="Note attività"></textarea></label>
+          <details class="advanced-fields"><summary>Tag e conclusioni</summary><label class="field"><span>Tag, separati da virgole</span><input id="taskTags" name="tags" aria-label="Tag separati da virgole" /></label><label class="field"><span>Conclusioni</span><textarea id="taskConclusions" name="conclusions" rows="5" aria-label="Conclusioni attività"></textarea></label></details>
+        </div>
+        <div class="drawer-footer"><div class="form-error is-hidden" id="taskError" role="alert"></div><div class="drawer-actions"><button class="danger-button is-hidden" id="deleteTaskButton" type="button">Elimina</button><span class="action-spacer"></span><button class="secondary-button" id="cancelTaskButton" type="button">Annulla</button><button class="primary-button" id="saveTaskButton" type="submit" title="Salva (Ctrl+S)">Aggiungi attività</button></div></div>
+      </form>
+    </aside>
+
+    <dialog class="modal" id="projectDialog"><form method="dialog" id="projectForm" novalidate><header class="modal-header"><div><h2 id="projectDialogTitle">Nuovo progetto</h2><p>Definisci il nome e aggiungi una descrizione facoltativa.</p></div><button class="icon-button" value="cancel" type="submit" formnovalidate aria-label="Chiudi">×</button></header><label class="field"><span>Nome progetto (obbligatorio)</span><input id="projectName" aria-label="Nome progetto" required /></label><label class="field"><span>Descrizione (facoltativa)</span><textarea id="projectDescriptionInput" aria-label="Descrizione facoltativa" rows="4"></textarea></label><div class="modal-error is-hidden" id="projectError" role="alert" aria-live="assertive"></div><footer class="modal-actions"><span class="action-spacer"></span><button class="secondary-button" value="cancel" type="submit" formnovalidate>Annulla</button><button class="primary-button" id="saveProjectButton" value="default" type="submit">Crea progetto</button></footer></form></dialog>
+    <dialog class="modal" id="personDialog"><form method="dialog" id="personForm" novalidate><header class="modal-header"><div class="modal-person-heading"><span class="modal-avatar" id="personDialogAvatar" aria-hidden="true">+</span><div><h2 id="personDialogTitle">Nuova persona</h2><p>Ruolo e azienda aiutano a leggere assegnazioni e report.</p></div></div><button class="icon-button" value="cancel" type="submit" formnovalidate aria-label="Chiudi">×</button></header><div class="field-row"><label class="field"><span>Nome (obbligatorio)</span><input id="personFirstName" required /></label><label class="field"><span>Cognome (facoltativo)</span><input id="personLastName" /></label></div><label class="field"><span>Ruolo (facoltativo)</span><input id="personRole" /></label><label class="field"><span>Azienda (facoltativa)</span><input id="personCompany" /></label><div class="modal-error is-hidden" id="personError" role="alert" aria-live="assertive"></div><footer class="modal-actions"><button class="danger-button is-hidden" id="deletePersonButton" type="button">Elimina persona</button><span class="action-spacer"></span><button class="secondary-button" value="cancel" type="submit" formnovalidate>Annulla</button><button class="primary-button" id="savePersonButton" value="default" type="submit">Aggiungi persona</button></footer></form></dialog>
+        <dialog class="modal help-modal" id="helpDialog" aria-labelledby="helpDialogTitle" aria-describedby="helpDialogIntro">
+          <form method="dialog">
+            <header class="modal-header"><div><h2 id="helpDialogTitle">Guida all’utilizzo</h2><p>Le funzioni principali di Broject, sempre a portata di mano.</p></div><button class="icon-button" value="cancel" type="submit" aria-label="Chiudi guida">×</button></header>
+            <div class="help-copy" id="helpDialogIntro">
+              <p class="help-intro">Le modifiche confermate sono salvate sul dispositivo. Nell’editor attività usa <strong>Salva</strong> oppure Ctrl/Cmd+S. Se un salvataggio non riesce, i campi restano disponibili per correggere e riprovare.</p>
+              <div class="help-section-grid">
+                <section class="help-section"><h3>Navigazione</h3><ul><li>Crea un progetto dalla barra laterale, poi selezionalo per lavorare sulle sue attività.</li><li>Usa la barra laterale per aprire Panoramica, Il mio lavoro, Persone e Report.</li><li>Nel progetto scegli Bacheca, Elenco o Settimana.</li></ul></section>
+                <section class="help-section"><h3>Attività</h3><ul><li>Crea un’attività con progetto, stato, priorità, scadenza, persone e tag.</li><li>Trascina le card tra Da fare, In corso e Completate.</li><li>Apri una card per note, conclusioni, assegnazioni e modifica.</li></ul></section>
+                <section class="help-section"><h3>Ricerca e viste</h3><ul><li>La ricerca globale trova progetti, persone e attività.</li><li>Nei progetti usa ricerca e filtri per stato o persona.</li><li>La vista Settimana raccoglie le attività attorno alla scadenza.</li></ul></section>
+                <section class="help-section"><h3>Report Excel</h3><ul><li>Da Report esporta il portfolio completo o il progetto selezionato.</li><li>Puoi aggiungere note finali prima dell’export del progetto.</li><li>I file `.xlsx` sono editabili in Excel e LibreOffice, senza cloud.</li></ul></section>
+                <section class="help-section"><h3>Scorciatoie</h3><div class="help-list"><div><kbd>Ctrl+K / Cmd+K</kbd><span>Apri la ricerca globale.</span></div><div><kbd>Ctrl+N / Cmd+N</kbd><span>Crea una nuova attività.</span></div><div><kbd>Ctrl+S / Cmd+S</kbd><span>Salva l’attività aperta.</span></div><div><kbd>Ctrl+1…4</kbd><span>Apri Panoramica, Il mio lavoro, Persone o Report.</span></div><div><kbd>Ctrl+Shift+B/L/W</kbd><span>Cambia Bacheca, Elenco o Settimana.</span></div><div><kbd>F1 oppure ?</kbd><span>Apri questa guida.</span></div><div><kbd>Esc</kbd><span>Chiudi ricerca, menu o editor.</span></div></div></section>
+                <section class="help-section"><h3>Stati e recupero</h3><p>Le azioni distruttive chiedono conferma. Dopo l’eliminazione puoi usare <strong>Annulla</strong> finché l’app resta aperta. I messaggi in alto spiegano eventuali problemi di storage o recupero.</p></section>
+              </div>
+              <p class="help-note">Suggerimento: quando un comando non è disponibile, controlla la sezione attiva, chiudi il drawer o termina l’esportazione in corso.</p>
+            </div>
+            <div class="help-scroll-hint is-hidden" id="helpScrollHint"><span>Scorri per consultare tutte le sezioni</span><span aria-hidden="true">↓</span></div>
+            <footer class="modal-actions"><button class="primary-button" value="cancel" type="submit">Chiudi</button></footer>
+          </form>
+        </dialog>
+        <dialog class="modal" id="unsavedTaskDialog"><form method="dialog" id="unsavedTaskForm"><header class="modal-header"><div><h2>Modifiche non salvate</h2><p>Vuoi salvare le modifiche prima di chiudere?</p></div></header><p class="unsaved-task-copy">Sì: salva e chiudi. No: scarta le modifiche. Annulla: continua a modificare.</p><footer class="modal-actions"><button class="secondary-button" data-unsaved-choice="cancel" type="button">Continua a modificare</button><button class="danger-button" data-unsaved-choice="discard" type="button">Scarta</button><button class="primary-button" data-unsaved-choice="save" type="button">Salva e chiudi</button></footer></form></dialog>
+        <dialog class="modal unsaved-dialog" id="unsavedDialog" aria-labelledby="unsavedDialogTitle" aria-describedby="unsavedDialogMessage"><form method="dialog" id="unsavedForm"><header class="modal-header"><div><h2 id="unsavedDialogTitle">Modifiche non salvate</h2><p id="unsavedDialogMessage">Ci sono modifiche non salvate. Vuoi uscire senza salvarle?</p></div></header><footer class="modal-actions"><button class="secondary-button" data-dialog-choice="cancel" type="button" autofocus>No, continua</button><button class="danger-button" data-dialog-choice="discard" type="button">Sì, esci</button></footer></form></dialog>
+        <dialog class="modal action-confirm-dialog" id="actionConfirmDialog" aria-labelledby="actionConfirmDialogTitle" aria-describedby="actionConfirmDialogMessage"><form method="dialog" id="actionConfirmForm"><header class="modal-header"><div><h2 id="actionConfirmDialogTitle"></h2><p id="actionConfirmDialogMessage"></p></div></header><footer class="modal-actions"><button class="secondary-button" data-confirm-choice="cancel" type="button" autofocus>No</button><button class="danger-button" data-confirm-choice="confirm" type="button">Sì</button></footer></form></dialog>
+        <dialog class="modal" id="reportNotesDialog"><form method="dialog" id="reportNotesForm"><header class="modal-header"><div><h2>Note del report</h2><p>Facoltative. Aggiungi una sintesi oppure continua senza note.</p></div><button class="icon-button" value="cancel" type="submit" aria-label="Chiudi">×</button></header><label class="field"><span>Sintesi, decisioni e prossimi passi</span><textarea id="reportNotes" aria-label="Note finali del report, facoltative" rows="6" placeholder=""></textarea></label><footer class="modal-actions"><button class="secondary-button" value="cancel" type="submit">Annulla</button><button class="primary-button" value="default" type="submit">Continua con l’export</button></footer></form></dialog>
+
+    <script type="module" src="./app.mjs"></script>
+  </body>
+</html>

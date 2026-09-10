@@ -1,0 +1,115 @@
+# Compatibility matrix
+
+Source contract: `README.md`, `src/Broject.Core`, `src/Broject.App/MainWindow.xaml` and existing smoke tests in parent project.
+
+## Implemented in cross-platform slice
+
+- Separate app directory: `broject-cross-platform`.
+- Tauri 2 desktop shell with 1480×900 default and 1080×720 minimum window, global `invoke` bridge enabled.
+- Tauri document/window title matches the WPF title: `Broject — il lavoro, finalmente chiaro`.
+- Italian dashboard shell with dark navigation, overview, project Board/List/Week, My Work, People, Reports and task drawer.
+- Project header actions (`Esporta`, `Modifica`, `Elimina`) and overview status distribution matching the WPF surface.
+- Project header progress bar, percentage and status row match the WPF project detail surface, including the `N% completato` copy.
+- Topbar subtitles match the WPF section mapping; overview defaults and activity/weekly-card copy match the WPF templates.
+- Calendar toolbar and day labels match WPF ordering/capitalization; weekly completion boundary uses the local exclusive next-day limit.
+- Task Board/List/Calendar keep WPF status presentation, priority labels/badges, status colors and compact assignee labels.
+- Shell dimensions match the WPF contract: 220px sidebar, 68px topbar and 1080×720 minimum canvas.
+- Startup storage failures show a blocking `Avvio non riuscito` surface, preserve the explicit “I dati locali non sono stati modificati.” message, and move focus to `Riprova`; the workspace remains inert.
+- Unexpected frontend errors and rejected promises are caught, recorded through the native `log_error` command in `broject-error.log`, and announced with the WPF recovery copy while confirmed changes remain available.
+- Native startup/runtime failure dialogs preserve the WPF safety and recovery copy, including `nel file broject-error.log` and the reminder that confirmed changes remain saved.
+- Unrecoverable native storage errors preserve the full WPF recovery instructions, including the directory containing the preserved files and the instruction to restore a valid copy before reopening.
+- Overview Projects card exposes the WPF `+` new-project affordance.
+- Sidebar project rows keep the WPF dot/name/separate open-task-count badge structure.
+- Segoe UI/local styling and existing Broject palette.
+- Ctrl+N is blocked while an editor/report dialog or report export is active; report export uses a busy state with inert/ARIA busy protection and rejects concurrent runs.
+- The global `Crea` action with no projects opens `Nuovo progetto`, matching WPF `QuickCreate_Click`; the `Aggiungi attività` path keeps the WPF information guard instead of opening a different flow.
+- Project Undo appends restored tasks in the same order as WPF `DeleteProject`, and task Undo filters assignees that no longer exist.
+- Invalid task statuses normalize to `Todo` and clear `CompletedAt`, matching the WPF normalizer.
+- Portfolio report assignees use WPF display-name ordering, while project report assignees keep their project-report ordering.
+- Project workbook risk rows use due-date ordering, matching WPF `AddRiskTable`; no additional title tie-break is added when dates are equal.
+- Project name, optional project description and final report notes expose explicit accessible names matching the WPF dialog fields.
+- Window close is guarded during report export and when the task editor has unsaved changes.
+- Tauri `CloseRequested` is prevented for export/task/dialog dirty states and uses the WPF task save/discard decision before forcing `destroy()`; browser `beforeunload` remains the fallback.
+- Window close is also guarded when the Project or Person dialog has unsaved field changes.
+- Project and Person dirty-close confirmations use an internal accessible dialog with visible focus, an explicit conservative “No, continua” action and Escape-to-cancel behavior, instead of browser `window.confirm`.
+- Destructive task/project/person actions and the post-export “open now?” choice use the same internal accessible confirmation surface with WPF titles/copy, default focus on “No” and Escape-to-cancel behavior.
+- Storage read-only mode after a failed save disables mutations while keeping report export available for recovery and inspection; an initial load failure blocks the workspace entirely.
+- Project Board/List task ordering matches WPF: status, priority descending, due date, title; project description and empty states retain the WPF actionable copy.
+- Keyboard shortcuts: `Ctrl/Cmd+K`, `Ctrl/Cmd+N`, `Ctrl/Cmd+S`, `Ctrl/Cmd+1..4`, `Ctrl/Cmd+Shift+B/L/W`, `Esc`, `F1` and `?`; navigation shortcuts are ignored while typing in a text field.
+- Workspace search across tasks, projects and people, including completed and undated tasks.
+- Search groups hide when empty; task results use the focus card and people results use the workload card.
+- Search people cards preserve WPF ordering, zero workload bar and empty-details behavior; the full People view uses the WPF fallback copy.
+- People cards preserve WPF avatar palette and readable dimensions (42×42 avatar, 12px details, 38 DIP edit action).
+- People workload text uses the WPF `Senza nome` display-name fallback for incomplete person records.
+- Assignee options use the WPF `Nome - Ruolo - Azienda` label and surname/first-name ordering; person filters keep name-only labels.
+- Task drawer assignee field keeps the WPF standalone `Persone assegnate` label and right-aligned `Seleziona` affordance.
+- Overview recent activity uses WPF relative-time labels; weekly completed entries use local `ddd HH:mm` and are non-interactive like the WPF summary template.
+- Overview, My Work and Reports use the WPF activity/empty-state/export-note copy and date separator conventions.
+- Overview week range uses the same WPF `dd MMM — dd MMM yyyy` format without an extra label prefix.
+- Explicit focus restoration for task/project/person dialogs, with visible-element fallback.
+- Closing the global search with the button or `Esc` restores focus to the search box, matching WPF `ClearSearch_Click` and `CloseEditorCommand`.
+- Deleting a task restores focus to `Aggiungi attività` after the refreshed view, matching WPF `DeleteEditingTask_Click`.
+- Undoing a deletion keeps the active global search query/results, matching WPF `UndoDelete_Click` refreshing the search surface after `RefreshAll`.
+- Person-save and Undo feedback preserve the exact WPF toast copy.
+- Export failures and saved-but-not-openable report errors preserve the WPF title/body copy.
+- The Undo recovery action keeps the WPF tooltip `Ripristina l’ultima eliminazione di questa sessione`.
+- Global search, quick-create, person edit and task-save actions keep their WPF tooltip copy.
+- Project Board task moves restore focus to the rendered task card, preserve the WPF `“Titolo” ora è ...` toast copy, and dropping into the current status column is a no-op like WPF; project navigation supports `ArrowUp`/`ArrowDown`/`Home`/`End`, keeps edge arrows as no-ops and clears row selection outside the Project section.
+- TaskCard movement arrows remain visible and disabled at the Todo/Done edges, matching WPF `CanMovePrevious`/`CanMoveNext`.
+- Project List hides the task table when there are no visible cards, leaving the WPF actionable empty state as the only content.
+- Project List exposes `aria-label="Attività del progetto"` on its table, matching the WPF `DataGrid` automation name.
+- Project search, week navigation, editor live status and task-drawer controls expose the corresponding WPF accessible names and live-state semantics.
+- State/person filters, report-project selection and export progress expose the corresponding WPF automation names.
+- A static parity contract reads literal WPF `AutomationProperties.Name`/`ToolTip` values and fails if their copy disappears from the replica.
+- Project filters keep `Azzera filtri` visible and disabled without active filters, matching the WPF button state; it becomes enabled when a local filter is active.
+- Unsaved task changes prompt before closing the app, changing project, or opening another task.
+- Choosing `Salva e chiudi` uses the WPF task validation copy/path instead of the browser’s native required-field validation.
+- Italian task deadlines use the WPF `gg/mm/aaaa` contract, reject impossible dates and preserve date-only values across time zones; reports and XLSX formatting use the same local-day rule.
+- Task-save validation preserves the WPF `SaveTask_Click` error copy: `La scadenza non è valida. Usa gg/mm/aaaa oppure lascia il campo vuoto.`.
+- DatePicker blur validation preserves the WPF `DateValidationError` copy and includes the entered invalid value: `La scadenza ‘31/02/2026’ non è valida. Usa gg/mm/aaaa oppure cancella il campo.`.
+- Task due-date editing includes a local calendar affordance with month navigation, date-only selection, `gg/mm/aaaa` formatting and Escape-to-close behavior matching the WPF `DatePicker` surface.
+- Task editor assignees use a collapsed WPF-style picker with live summary and Escape-to-collapse behavior.
+- Project list rows open on double-click or Enter; single row clicks remain inert unless an explicit action is selected.
+- Project/person/help/report dialogs preserve WPF copy, dynamic save labels, avatar summary, operational help flows, report notes copy and report filename timestamp format; the `?` help surface now contains the complete local-first usage guide and the discoverable shortcut reference.
+- Project, person and report-notes dialog dimensions preserve the WPF constraints: 540/580/620px widths and 400/470/420px minimum heights.
+- Project and person save failures preserve the WPF recovery prefix and announce the message through an assertive live region.
+- Save forms keep `required` semantics without browser-native blocking, so empty fields always reach the WPF-equivalent validation copy.
+- Overview and My Work KPI cards preserve the WPF text-only three-row template, with no extra icons and a 96px minimum height.
+- Project progress exposes an accessible 0–100 `progressbar` value synchronized with the visible WPF-equivalent percentage, including the no-project state.
+- Workspace search ordering uses deterministic ordinal-ignore-case comparison like WPF `WorkspaceQuery`, rather than browser locale collation.
+- Task/week navigation, task-card `Apri`, List headers, `+ Aggiungi persona` and dialog close buttons preserve the WPF text glyph controls (`‹`, `›`, `Apri`, uppercase headers, `+`, `×`).
+- Topbar/sidebar quick actions preserve WPF `+`/`?` glyphs, and the help surface keeps the `Chiudi` action, visible focus and a scrollable guide at the minimum window size.
+- Board cards hug their content instead of stretching into empty column space; the week grid fits all seven columns at the standard canvas width and remains horizontally scrollable at the minimum width.
+- XLSX styles use a high-contrast indigo/navy header system, slate/amber/emerald/red semantic states, dark text on light fills, white text on dark headers and thin borders for readable Excel/LibreOffice output.
+- Local-first JSON schema normalization, PascalCase compatibility, legacy single assignee migration, backup and corrupt-primary recovery in both the frontend store and native Rust storage boundary.
+- Duplicate-ID reference repair guarded like the WPF normalizer: existing IDs remain attached to the first valid entity, and generated repairs use UUID-compatible IDs.
+- CRUD service for projects, people and tasks, multi-assignee tasks, status transitions, completion timestamps and session undo.
+- Portfolio/project report snapshots and XLSX workbook sheet contract.
+- Offline XLSX ZIP writer with Excel/LibreOffice sheet names from existing app.
+- Rust native JSON storage commands with OS-specific application-data paths, atomic temporary-file replacement (`rename`/Windows `MoveFileExW`), `.bak` backup, `.corrupt` preservation, backup recovery and WPF-compatible ID/reference normalization.
+- Native report export commands with platform save dialogs, XLSX package validation (ZIP signature plus required workbook entries) and optional open-with-default-application flow.
+- Native `log_error` command preserves the WPF unexpected-error logging path for frontend runtime failures.
+- Tauri development wiring points `beforeDevCommand` to `npm run dev`, serves `http://127.0.0.1:4173` and bundles `../src`.
+- Tauri bundle declares the Broject `icon.png`, `icon.ico` and `icon.icns` assets instead of relying on the default Tauri icon. The ICNS is generated from the same PNG source and its container header/length are covered by the Tauri contract.
+- Native report export falls back to a browser download when the OS save dialog is unavailable; native open/save backends have platform fallbacks and date-safe filenames.
+- Native save-dialog launch errors use the same unavailable-dialog marker, so Windows/macOS/Linux process-start failures also reach the browser-download fallback.
+- Project report filenames follow the WPF `SafeFileName` behavior: spaces are preserved, Windows-invalid characters become `-`, and an empty name falls back to `Progetto`.
+- Single-instance guard: named Windows mutex and OS-released Unix file lock, with the same Italian already-open message.
+- Unix application data, backups, temporary data, single-instance lock (`0600`) and error log use user-only permissions; invalid empty/non-absolute XDG values fall back to the standard home directory.
+- Linux runtime smoke confirms the binary extracted from the `.deb` opens the WPF-equivalent window title and a second instance is stopped by the native lock with the `Broject è già aperto.` dialog.
+- Initial native error logging also reapplies `0700` to the Unix application directory before creating/appending the log.
+- Tauri bootstrap detects the native bridge before constructing the browser `localStorage` fallback, so desktop startup does not depend on browser storage availability.
+- Initial, quick-create and post-delete project selection follow the WPF first-project-by-name rule, keeping the active project and report selector deterministic when storage order differs.
+- Mutations await native persistence; writes are queued and failed writes roll back the in-memory state.
+
+## Still required before completion
+
+- Native Tauri verification on Windows and macOS, plus an installed-package verification on Linux, including installers, native dialog availability and single-instance behavior.
+- Linux compilation and Debian packaging are verified locally: `cargo check --release`, `cargo test` (10/10) and `Broject_3.0.0_amd64.deb` all pass. A real install/run verification on Linux is still useful.
+- Conditional target check for `x86_64-pc-windows-gnu` passes with a user-local MinGW toolchain, including the Tauri/WebView2 dependencies and `cfg(windows)` backend. The macOS check reaches the Apple crates but requires an Apple SDK/compiler to continue.
+- A Windows release cross-build now passes with the temporary MinGW toolchain and produces a PE32+ GUI x86-64 executable at `artifacts/Broject_3.0.0_windows_x64.exe` (SHA-256 `15e137cc977d46e857ae93ba2ec66a4d871d100719ccb84f66efb441de139008`) plus a PE32 NSIS installer at `artifacts/Broject_3.0.0_windows_x64-setup.exe` (SHA-256 `473baaf6721288fe19c3483183dde0683833d8f32ece383dbeda12fead2d5a1c`). The installer was generated with user-local NSIS stubs; runtime verification and signing still require a Windows host.
+- Final artifact inspection confirms the Windows PE types, the Debian package metadata (`broject` 3.0.0, `amd64`, WebKitGTK/GTK runtime dependencies) and the expected desktop launcher/icon entries.
+- Full parity audit against every WPF dialog, disabled/loading/error/empty state, focus return path, DPI and screen-reader scenario.
+- Verify downloaded workbooks by opening them in Excel and LibreOffice on supported platforms.
+- Port and run the parent smoke-test invariants against the Rust core.
+- Move report workbook generation from browser ES modules into Rust Tauri commands only if an all-Rust report core is later required; the current writer preserves the workbook sheet contract and the native shell owns the file path.

@@ -293,11 +293,11 @@
 
   Eseguire `cargo check --locked --release --features custom-protocol --manifest-path src-tauri/Cargo.toml` e, se l’ambiente lo permette, `cargo tauri build --ci`. Confermare che il bundle release usi `frontendDist` e non `devUrl`, e annotare esplicitamente ogni verifica Windows non eseguibile su Linux.
 
-- [ ] **Step 5: Audit sicurezza e diff**
+- [x] **Step 5: Audit sicurezza e diff**
 
   Controllare che config, dati runtime, `.bak`, `.corrupt`, log, `target` e `artifacts` non siano entrati nel commit. Eseguire `git diff --check`, `git status --short --branch` e una scansione mirata dei file aggiunti per segreti.
 
-- [ ] **Step 6: Commit finale e push**
+- [x] **Step 6: Commit finale e push**
 
   Commit: `docs: document configurable Broject data storage`.
 
